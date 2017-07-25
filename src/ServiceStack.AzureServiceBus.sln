@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{188960C0-9F83-4608-B283-117CD8D002D2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceStack.AzureServiceBus", "ServiceStack.AzureServiceBus\ServiceStack.AzureServiceBus.csproj", "{57E8A821-5CF0-4119-8D58-FCE8DA430EE3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceStack.AzureServiceBus.Tests", "..\tests\ServiceStack.AzureServiceBus.Tests\ServiceStack.AzureServiceBus.Tests.csproj", "{ED280C15-F631-4CD7-8B49-D0B7EDE550D2}"
+EndProject
+Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57E8A821-5CF0-4119-8D58-FCE8DA430EE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57E8A821-5CF0-4119-8D58-FCE8DA430EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57E8A821-5CF0-4119-8D58-FCE8DA430EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57E8A821-5CF0-4119-8D58-FCE8DA430EE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED280C15-F631-4CD7-8B49-D0B7EDE550D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED280C15-F631-4CD7-8B49-D0B7EDE550D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED280C15-F631-4CD7-8B49-D0B7EDE550D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED280C15-F631-4CD7-8B49-D0B7EDE550D2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ED280C15-F631-4CD7-8B49-D0B7EDE550D2} = {188960C0-9F83-4608-B283-117CD8D002D2}
+	EndGlobalSection
+EndGlobal
