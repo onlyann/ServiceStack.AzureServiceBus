@@ -253,12 +253,12 @@ namespace ServiceStack.AzureServiceBus.Tests
             }
         }
 
-        [Test]
-        [Ignore("not implemented yet")]
-        public void Can_filter_published_and_received_messages()
-        {
-            throw new NotImplementedException();
-        }
+        //[Test]
+        //[Ignore("not implemented yet")]
+        //public void Can_filter_published_and_received_messages()
+        //{
+        //    throw new NotImplementedException();
+        //}
 
         [Test]
         public void Messages_with_null_Response_is_published_to_OutMQ()
