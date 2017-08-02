@@ -1,7 +1,7 @@
 # ServiceStack.AzureServiceBus
 
 [![Build status](https://ci.appveyor.com/api/projects/status/2c1ackhg6rloriok/branch/master?svg=true)](https://ci.appveyor.com/project/onlyann/servicestack-azureservicebus/branch/master)
-
+[![Nuget](https://img.shields.io/nuget/v/ServiceStack.AzureServiceBus.svg)](https://www.nuget.org/packages/ServiceStack.AzureServiceBus/)
 
 This adds Azure Service Bus [MQ Server option](http://docs.servicestack.net/messaging) for the excellent [ServiceStack](https://github.com/serviceStack/serviceStack) framework.
 
@@ -18,6 +18,11 @@ This is inspired from the [Rabbit MQ implementation](http://docs.servicestack.ne
 ## Adding Azure Service Bus MQ support to ServiceStack
 
 [Create a Service Bus namespace](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-create-namespace-portal) in Azure and obtain the connection string from the Shared Access policies. 
+
+Install the package from Nuget.org
+```
+Install-Package ServiceStack.AzureServiceBus
+```
 
 Register Azure Service Bus MQ Server in your ServiceStack AppHost:
 

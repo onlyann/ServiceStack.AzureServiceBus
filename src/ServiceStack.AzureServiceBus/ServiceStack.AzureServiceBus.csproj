@@ -12,6 +12,14 @@
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Description>Azure Service Bus MQ Server option for ServiceStack</Description>
+    <Authors>Yann Normand</Authors>
+    <AssemblyTitle>ServiceStack.AzureServiceBus</AssemblyTitle>
+    <PackageProjectUrl>https://github.com/onlyann/ServiceStack.AzureServiceBus</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/onlyann/ServiceStack.AzureServiceBus/blob/master/license.txt</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/onlyann/ServiceStack.AzureServiceBus</RepositoryUrl>
+    <PackageTags>ServiceStack;Azure;Service Bus</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' != 'Debug' ">
