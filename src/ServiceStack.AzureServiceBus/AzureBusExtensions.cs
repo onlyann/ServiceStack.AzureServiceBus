@@ -122,13 +122,16 @@ namespace ServiceStack.AzureServiceBus
             return message;
         }
 
-        public static void RegisterQueueByName(this NamespaceManager namespaceMgr, string queueName)
+        public static void RegisterQueueByName(
+            this NamespaceManager namespaceMgr, 
+            string queueName, 
+            Action<string, QueueDescription> createQueueFilter = null)
         {
             if (queueName.IsDeadLetterQueue())
                 // Dead letter Queues is created in Azure Service Bus
                 return;
 
-            namespaceMgr.RegisterQueue(queueName);
+            namespaceMgr.RegisterQueue(queueName, createQueueFilter);
         }
 
         public static bool IsDeadLetterQueue(this string queueName)
@@ -136,18 +139,45 @@ namespace ServiceStack.AzureServiceBus
             return queueName != null && queueName.EndsWith(".dlq");
         }
 
-        public static void RegisterQueue(this NamespaceManager namespaceMgr, string queueName)
+        private static QueueDescription TryGetQueue(this NamespaceManager namespaceMgr, string path)
+        {
+            // much faster than catch exception with GetQueue
+            return namespaceMgr.GetQueues($"startswith(path, '{path}') eq true").FirstOrDefault();
+        }
+
+        public static void RegisterQueue(
+            this NamespaceManager namespaceMgr, 
+            string queueName, 
+            Action<string, QueueDescription> createQueueFilter = null)
         {
             if (!QueueNames.IsTempQueue(queueName))
             {
+                var path = queueName.ToSafeAzureQueueName();
                 try
                 {
-                    namespaceMgr.CreateQueue(queueName.ToSafeAzureQueueName());
+                    var queueDescription = namespaceMgr.TryGetQueue(path);
+                    var queueExists = queueDescription != null;
+                    if (queueDescription == null)
+                        queueDescription = new QueueDescription(path);
+
+                    if (createQueueFilter != null)
+                    {
+                        createQueueFilter.Invoke(queueName, queueDescription);
+
+                        // the queue may have been deleted/created as part of the filter, verify its status
+                        queueExists = namespaceMgr.TryGetQueue(path) != null;
+                    }
+                    
+                    if (queueExists)
+                    {
+                        namespaceMgr.UpdateQueue(queueDescription);
+                    }
+                    else
+                    {
+                        namespaceMgr.CreateQueue(queueDescription);
+                    }
                 }
-                catch (MessagingEntityAlreadyExistsException)
-                { 
-                    // queue already created 
-                }
+                catch (MessagingEntityAlreadyExistsException) { /* queue already created */ }
             }
         }
 
@@ -190,32 +220,67 @@ namespace ServiceStack.AzureServiceBus
             }
         }
 
-        public static void PurgeQueue<T>(this IMessageFactory msgFactory)
+        private static AzureBusMessageFactory ToAzureMessageFactoryOrThrow(this IMessageFactory msgFactory, string paramName)
         {
             var azureMgFactory = msgFactory as AzureBusMessageFactory;
-            if (azureMgFactory == null) throw new ArgumentException(nameof(msgFactory), $"the object must be assignable to {typeof(AzureBusMessageFactory)}");
-            azureMgFactory.PurgeQueue<T>();
+            if (azureMgFactory == null) throw new ArgumentException(paramName, $"the object must be assignable to {typeof(AzureBusMessageFactory)}");
+            return azureMgFactory;
+        }
+
+        public static void PurgeQueue<T>(this IMessageFactory msgFactory)
+        {
+            msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .PurgeQueue<T>();
         }
 
         public static Task PurgeQueueAsync<T>(this IMessageFactory msgFactory)
         {
-            var azureMgFactory = msgFactory as AzureBusMessageFactory;
-            if (azureMgFactory == null) throw new ArgumentException(nameof(msgFactory), $"the object must be assignable to {typeof(AzureBusMessageFactory)}");
-            return azureMgFactory.PurgeQueueAsync<T>();
+            return msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .PurgeQueueAsync<T>();
         }
 
-        public static void RegisterQueues(this NamespaceManager namespaceMgr, QueueNames queueNames)
+        public static void DeleteQueue<T>(this IMessageFactory msgFactory)
         {
-            namespaceMgr.RegisterQueue(queueNames.In);
-            namespaceMgr.RegisterQueue(queueNames.Priority);
-            namespaceMgr.RegisterQueue(queueNames.Out);
+            msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .DeleteQueue<T>();
+        }
+
+        public static Task DeleteQueueAsync<T>(this IMessageFactory msgFactory)
+        {
+            return msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .DeleteQueueAsync<T>();
+        }
+
+        public static void RegisterQueues(
+            this NamespaceManager namespaceMgr, 
+            QueueNames queueNames,
+            Action<string, QueueDescription> createQueueFilter = null)
+        {
+            namespaceMgr.RegisterQueue(queueNames.In, createQueueFilter);
+            namespaceMgr.RegisterQueue(queueNames.Priority, createQueueFilter);
+            namespaceMgr.RegisterQueue(queueNames.Out, createQueueFilter);
+            // queueNames.Dlq is created by Azure Service Bus
+        }
+
+        public static void RegisterQueues<T>(
+            this NamespaceManager namespaceMgr,
+            Action<string, QueueDescription> createQueueFilter = null)
+        {
+            namespaceMgr.RegisterQueue(QueueNames<T>.In, createQueueFilter);
+            namespaceMgr.RegisterQueue(QueueNames<T>.Priority, createQueueFilter);
+            namespaceMgr.RegisterQueue(QueueNames<T>.Out, createQueueFilter);
             // queueNames.Dlq is created by Azure Service Bus
         }
 
         public static string ToSafeAzureQueueName(this string queueName)
         {
             // valid characters are alpha numeric, period, hyphen and underscore
-            return Regex.Replace(queueName, @"[^\w\._-]", "-", RegexOptions.None); // replace invalid chars with hyphen
+            // lowercase the name for consistency given queue names are case insensitive
+            return Regex.Replace(queueName, @"[^\w\._-]", "-", RegexOptions.None).ToLower(); // replace invalid chars with hyphen
         }
 
         public static bool IsPriority(this IMessage message) => message.Priority > 0;

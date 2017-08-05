@@ -9,7 +9,7 @@ namespace ServiceStack.AzureServiceBus.Tests
         [Test]
         public void ToSafeAzureQueueName()
         {
-            Assert.AreEqual("mq-Reverse.In", "mq:Reverse.In".ToSafeAzureQueueName());
+            Assert.AreEqual("mq-reverse.in", "mq:Reverse.In".ToSafeAzureQueueName());
         }
     }
 }

@@ -97,7 +97,7 @@ namespace ServiceStack.AzureServiceBus
         {
             if (!Queues.Contains(queueName))
             {
-                msgFactory.NamespaceManager.RegisterQueueByName(queueName);
+                msgFactory.NamespaceManager.RegisterQueueByName(queueName, msgFactory.CreateQueueFilter);
                 Queues.Add(queueName);
             }
         }

@@ -1,4 +1,5 @@
-﻿using ServiceStack.Logging;
+﻿using Microsoft.ServiceBus.Messaging;
+using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.Text;
 using System;
@@ -30,6 +31,25 @@ namespace ServiceStack.AzureServiceBus
         private AzureMessageReceiverPump[] messagePumps;
 
         public List<Type> RegisteredTypes => msgHandlerFactoryMap.Keys.ToList();
+
+        private Action<string, QueueDescription> createQueueFilter = null;
+
+        /// <summary>
+        /// Queue filter called before a queue gets created or updated.
+        /// The first parameter is the queue name for ServiceStack. 
+        /// Azure queue name can be accessed in the queue description object.
+        /// The queue description can be modified at this time.
+        /// </summary>
+        public Action<string, QueueDescription> CreateQueueFilter
+        {
+            get => createQueueFilter;
+            set
+            {
+                createQueueFilter = value;
+                if (MessageFactory is AzureBusMessageFactory msgFactory)
+                    msgFactory.CreateQueueFilter = createQueueFilter;
+            }
+        }
 
         private int status;
 
@@ -159,7 +179,7 @@ namespace ServiceStack.AzureServiceBus
                              queueNames.In,
                              noOfThreads));
 
-                messageFactory.NamespaceManager.RegisterQueues(queueNames);
+                messageFactory.NamespaceManager.RegisterQueues(queueNames, createQueueFilter);
             }
 
             messagePumps = msgPumpsBuilder.ToArray();
@@ -186,6 +206,8 @@ namespace ServiceStack.AzureServiceBus
         public virtual void StopMessagePumps()
         {
             Log.Debug("Stopping all Azure Bus message pumps...");
+
+            if (messagePumps == null) return;
 
             foreach (var msgPump in messagePumps)
             {

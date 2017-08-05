@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Microsoft.ServiceBus.Messaging;
+using NUnit.Framework;
 using ServiceStack;
 using ServiceStack.AzureServiceBus;
 using ServiceStack.Logging;
@@ -261,11 +262,12 @@ namespace ServiceStack.AzureServiceBus.Tests
         //}
 
         [Test]
-        public void Messages_with_null_Response_is_published_to_OutMQ()
+        public async Task Messages_with_null_Response_is_published_to_OutMQ()
         {
             int msgsReceived = 0;
             using (var mqServer = CreateMqServer())
             {
+                await mqServer.MessageFactory.PurgeQueueAsync<HelloNull>();
                 mqServer.RegisterHandler<HelloNull>(m =>
                 {
                     Interlocked.Increment(ref msgsReceived);
@@ -292,11 +294,12 @@ namespace ServiceStack.AzureServiceBus.Tests
         }
 
         [Test]
-        public void Messages_with_null_Response_is_published_to_ReplyMQ()
+        public async Task Messages_with_null_Response_is_published_to_ReplyMQ()
         {
             int msgsReceived = 0;
             using (var mqServer = CreateMqServer())
             {
+                await mqServer.MessageFactory.PurgeQueueAsync<HelloNull>();
                 mqServer.RegisterHandler<HelloNull>(m =>
                 {
                     Interlocked.Increment(ref msgsReceived);
@@ -321,6 +324,73 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                     Assert.That(response.Name, Is.EqualTo("Into the Void"));
                     Assert.That(msgsReceived, Is.EqualTo(1));
+                }
+            }
+        }
+
+        [Test]
+        public async Task Can_change_queue_settings_before_creation()
+        {
+            var queueDescriptions = new Dictionary<string, QueueDescription>();
+
+            using (var mqHost = CreateMqServer())
+            {
+                await mqHost.MessageFactory.DeleteQueueAsync<Hello>();
+
+                mqHost.CreateQueueFilter = (queueName, description) => {
+                    queueDescriptions[queueName] = description;
+                    description.MaxSizeInMegabytes = 3072;
+                };
+
+                mqHost.RegisterHandler<Hello>(m =>
+                    new HelloResponse { Result = "Hello, " + m.GetBody().Name });
+
+                mqHost.Start();
+
+                // priority, normal and out queues
+                Assert.That(queueDescriptions.Count, Is.EqualTo(3));
+                foreach (var queueName in queueDescriptions.Keys)
+                {
+                    var desc = queueDescriptions[queueName];
+                    Assert.That(queueName, Is.Not.EqualTo(desc.Path));
+                    Assert.That(queueName.ToSafeAzureQueueName(), Is.EqualTo(desc.Path));
+                    Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
+                }
+            }
+        }
+
+        [Test]
+        public void Can_update_queue_settings_when_already_present()
+        {
+            var queueDescriptions = new Dictionary<string, QueueDescription>();
+
+            using (var mqHost = CreateMqServer())
+            {
+                var nsMgr = (mqHost.MessageFactory as AzureBusMessageFactory).NamespaceManager;
+                nsMgr.RegisterQueues<Hello>((queueName, desc) =>
+                {
+                    desc.MaxDeliveryCount = 3;
+                });
+
+                mqHost.CreateQueueFilter = (queueName, description) => {
+                    queueDescriptions[queueName] = description;
+                    description.MaxSizeInMegabytes = 3072;
+                };
+
+                mqHost.RegisterHandler<Hello>(m =>
+                    new HelloResponse { Result = "Hello, " + m.GetBody().Name });
+
+                mqHost.Start();
+
+                // priority, normal and out queues
+                Assert.That(queueDescriptions.Count, Is.EqualTo(3));
+                foreach (var queueName in queueDescriptions.Keys)
+                {
+                    var desc = queueDescriptions[queueName];
+                    Assert.That(queueName, Is.Not.EqualTo(desc.Path));
+                    Assert.That(queueName.ToSafeAzureQueueName(), Is.EqualTo(desc.Path));
+                    Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
+                    Assert.That(desc.MaxDeliveryCount, Is.EqualTo(3));
                 }
             }
         }

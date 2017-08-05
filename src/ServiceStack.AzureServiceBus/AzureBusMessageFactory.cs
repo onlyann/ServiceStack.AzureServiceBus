@@ -13,6 +13,14 @@ namespace ServiceStack.AzureServiceBus
 
         public MessagingFactory MessagingFactory { get; private set; }
 
+        /// <summary>
+        /// Queue filter called before a queue gets created or updated.
+        /// The first parameter is the queue name for ServiceStack. 
+        /// Azure queue name can be accessed in the queue description object.
+        /// The queue description can be modified at this time.
+        /// </summary>
+        public Action<string, QueueDescription> CreateQueueFilter { get; set; }
+
         public AzureBusMessageFactory(string connectionString)
         {
             NamespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
@@ -45,6 +53,35 @@ namespace ServiceStack.AzureServiceBus
             return Task.WhenAll(queues.Select(x => x.ToSafeAzureQueueName())
                 .Where(q => !q.IsDeadLetterQueue())
                 .Select(q => MessagingFactory.CreateMessageReceiver(q).PurgeAsync()));
+        }
+
+        public void DeleteQueue<T>() => DeleteQueues(QueueNames<T>.AllQueueNames);
+
+        public Task DeleteQueueAsync<T>() => DeleteQueuesAsync(QueueNames<T>.AllQueueNames);
+
+        public void DeleteQueues(params string[] queues)
+        {
+            queues.Select(x => x.ToSafeAzureQueueName())
+                .Where(q => !q.IsDeadLetterQueue())
+                .Each(q => {
+                    try {
+                        NamespaceManager.DeleteQueue(q);
+                    }
+                    catch (MessagingEntityNotFoundException) { /* not present */ }
+                  });
+        }
+
+        public Task DeleteQueuesAsync(params string[] queues)
+        {
+            return Task.WhenAll(queues.Select(x => x.ToSafeAzureQueueName())
+                .Where(q => !q.IsDeadLetterQueue())
+                .Select(async q => {
+                    try
+                    {
+                        await NamespaceManager.DeleteQueueAsync(q).ConfigureAwait(false);
+                    }
+                    catch (MessagingEntityNotFoundException) { /* not present */ }
+                }));
         }
 
         public void Dispose()

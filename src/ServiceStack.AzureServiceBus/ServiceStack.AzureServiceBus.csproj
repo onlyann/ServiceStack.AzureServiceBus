@@ -35,6 +35,10 @@
     <DefineConstants>$(DefineConstants);NET462</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile></DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net462' ">
     <Reference Include="System" />
     <Reference Include="System.Core" />
