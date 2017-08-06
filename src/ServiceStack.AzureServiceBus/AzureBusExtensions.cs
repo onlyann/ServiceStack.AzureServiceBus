@@ -245,6 +245,20 @@ namespace ServiceStack.AzureServiceBus
                 .PurgeQueue<T>();
         }
 
+        public static void PurgeQueues(this IMessageFactory msgFactory, params string[] queues)
+        {
+            msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .PurgeQueues(queues);
+        }
+
+        public static Task PurgeQueuesAsync(this IMessageFactory msgFactory, params string[] queues)
+        {
+            return msgFactory
+                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
+                .PurgeQueuesAsync(queues);
+        }
+
         public static Task PurgeQueueAsync<T>(this IMessageFactory msgFactory)
         {
             return msgFactory
