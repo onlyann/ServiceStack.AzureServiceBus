@@ -52,6 +52,8 @@ namespace ServiceStack.AzureServiceBus
             {
                 foreach (var key in message.Meta.Keys)
                 {
+                    if (key == "QueueName") continue;
+
                     brokeredMessage.Properties[key] = message.Meta[key];
                 }
             }
@@ -69,6 +71,17 @@ namespace ServiceStack.AzureServiceBus
             return dic.TryGetValue(key, out object val) ? (T)val : defaultValFn();
         }
 
+        internal static void SetQueueName(this BrokeredMessage brokeredMessage, string queueName)
+        {
+            brokeredMessage.Properties["QueueName"] = queueName;
+        }
+
+        internal static string QueueName(this IMessage message)
+        {
+            if (message?.Meta == null) return null;
+            message.Meta.TryGetValue("QueueName", out string queueName);
+            return queueName;
+        }
 
         public static IMessage<T> ToMessage<T>(this BrokeredMessage brokeredMessage)
         {
@@ -90,7 +103,8 @@ namespace ServiceStack.AzureServiceBus
                 Priority = props.GetOrDefault<long>("Priority"),
                 ReplyTo = brokeredMessage.ReplyTo,
                 Tag = brokeredMessage.LockToken.ToString(),
-                RetryAttempts = brokeredMessage.DeliveryCount - 1
+                RetryAttempts = brokeredMessage.DeliveryCount - 1,
+                Meta = new Dictionary<string, string>()
             };
 
             if (brokeredMessage.CorrelationId != null)
@@ -112,9 +126,6 @@ namespace ServiceStack.AzureServiceBus
 
                     continue;
                 }
-
-                if (message.Meta == null)
-                    message.Meta = new Dictionary<string, string>();
 
                 message.Meta[entry.Key] = (string) entry.Value;
             }

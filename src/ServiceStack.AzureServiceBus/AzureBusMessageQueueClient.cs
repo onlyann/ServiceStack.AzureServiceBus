@@ -23,6 +23,10 @@ namespace ServiceStack.AzureServiceBus
         public IMessage<T> Get<T>(string queueName, TimeSpan? timeOut = null)
         {
             var brokeredMsg = GetMessage(queueName, timeOut);
+
+            // need to keep track of queue name for Ack
+            brokeredMsg.SetQueueName(queueName);
+
             return brokeredMsg.ToMessage<T>();
         }
 
@@ -41,14 +45,14 @@ namespace ServiceStack.AzureServiceBus
         public void Ack(IMessage message)
         {
             var lockToken = Guid.Parse(message.Tag);
-            var queueClient = GetMessageReceiver(message.ToInQueueName());
+            var queueClient = GetMessageReceiver(message.QueueName() ?? message.ToInQueueName());
             queueClient.Complete(lockToken);
         }
 
         public void Nak(IMessage message, bool requeue, Exception exception = null)
         {
             var lockToken = Guid.Parse(message.Tag);
-            var queueClient = GetMessageReceiver(message.ToInQueueName());
+            var queueClient = GetMessageReceiver(message.QueueName() ?? message.ToInQueueName());
 
             if (requeue)
                 queueClient.Abandon(lockToken);

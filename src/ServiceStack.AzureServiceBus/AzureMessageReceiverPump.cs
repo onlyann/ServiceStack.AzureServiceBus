@@ -65,6 +65,9 @@ namespace ServiceStack.AzureServiceBus
         /// <param name="msg"></param>
         protected virtual void OnMessage(BrokeredMessage msg)
         {
+            // need to keep track incoming queue name of message for Ack
+            msg.SetQueueName(QueueName);
+
             var threadNumber = Interlocked.Increment(ref threadCount);
             try
             {
