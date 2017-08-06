@@ -1,21 +1,30 @@
 ﻿using Microsoft.ServiceBus.Messaging;
 using ServiceStack.Messaging;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus
 {
     public class AzureBusMessageProducer : IMessageProducerExtended, IOneWayClient
     {
-        protected delegate void PublishAllDelegate(IEnumerable<IMessage> messages);
+        static readonly MethodInfo publishAllOfIMessageGeneric = typeof(AzureBusMessageProducer)
+                .GetMethods()
+                .First(m =>
+                {
+                    var args = m.GetParameters();
+                    return m.Name == nameof(PublishAll) &&
+                    m.IsGenericMethod && args.Length == 1 &&
+                    args[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
+                    args[0].ParameterType.GetGenericArguments()[0].IsGeneric() &&
+                    args[0].ParameterType.GetGenericArguments()[0].GetGenericTypeDefinition() == typeof(IMessage<>);
+                });
 
-        static readonly Dictionary<Type, PublishAllDelegate> CacheFn
-            = new Dictionary<Type, PublishAllDelegate>();
+        static readonly Dictionary<Type, Action<IEnumerable<IMessage>>> CacheFn
+            = new Dictionary<Type, Action<IEnumerable<IMessage>>>();
 
         protected ConcurrentDictionary<string, MessageSender> MessageSenders = new ConcurrentDictionary<string, MessageSender>();
         protected ConcurrentDictionary<string, MessageReceiver> MessageReceivers = new ConcurrentDictionary<string, MessageReceiver>();
@@ -121,41 +130,53 @@ namespace ServiceStack.AzureServiceBus
             if (requests == null) return;
 
             var messages = requests.Select(MessageFactory.Create).ToList();
-            var reqType = messages.FirstOrDefault()?.GetType().GenericTypeArguments.FirstOrDefault();
+
+            if (messages.IsEmpty()) return;
+
+            var messageType = messages.First().GetType();
+            var reqType = messageType.GenericTypeArguments.FirstOrDefault();
+            
             if (reqType == null)
             {
-                foreach (var m in messages)
-                {
-                    Publish(m);
-                }
+                // IEnumerable<IMessage>
+                messages.ForEach(x => Publish(x));
             }
             else
             {
-                GetOrCreateDelegate(reqType)(messages);
+                // IEnumerable<IMessage<T>>
+                GetOrCreatePublishAllDelegate(reqType)(messages);
             }
         }
 
-        protected virtual PublishAllDelegate GetOrCreateDelegate(Type reqType)
+        protected virtual Action<IEnumerable<IMessage>> GetOrCreatePublishAllDelegate(Type reqType)
         {
-            PublishAllDelegate publishAllDelegate;
+            Action<IEnumerable<IMessage>> action = null;
+
             lock (CacheFn)
             {
-                if (CacheFn.TryGetValue(reqType, out publishAllDelegate))
+                if (CacheFn.TryGetValue(reqType, out action))
                 {
-                    return publishAllDelegate;
+                    return action;
                 }
             }
 
-            var mi = typeof(AzureBusMessageProducer)
-                .GetMethods()
-                .First(m => m.Name == nameof(PublishAll) && m.IsGenericMethod);
+            var mi = publishAllOfIMessageGeneric.MakeGenericMethod(reqType);
+            var genericMsgListType = typeof(List<>).MakeGenericType(typeof(IMessage<>).MakeGenericType(reqType));
 
-            publishAllDelegate = (PublishAllDelegate)mi.MakeGenericMethod(reqType).CreateDelegate(
-                typeof(PublishAllDelegate));
+            action = msgs =>
+            {
+                var param = (IList) Activator.CreateInstance(genericMsgListType);
+                foreach (var msg in msgs)
+                {
+                    param.Add(msg);
+                }
 
-            lock (CacheFn) CacheFn[reqType] = publishAllDelegate;
+                mi.Invoke(this, new object[] { param });
+            };
 
-            return publishAllDelegate;
+            lock (CacheFn) CacheFn[reqType] = action;
+
+            return action;
         }
 
         public virtual BrokeredMessage GetMessage(string queueName, TimeSpan? serverWaitTime = null)
