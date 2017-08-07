@@ -64,7 +64,7 @@ mqServer.RegisterHandler<Hello>(m => { .. }, noOfThreads:4);
 
 ## Upcoming Features
 
-- [ ] queue creation filter
+- [X] queue creation filter
 - [ ] queue whitelisting
 - [ ] request and response global filter
 - [ ] error handler

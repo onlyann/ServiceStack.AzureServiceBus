@@ -1,6 +1,7 @@
 ﻿using System;
 using ServiceStack.Messaging;
 using Microsoft.ServiceBus.Messaging;
+using System.Collections.Generic;
 
 namespace ServiceStack.AzureServiceBus
 {
@@ -34,7 +35,7 @@ namespace ServiceStack.AzureServiceBus
 
         public string GetTempQueueName()
         {
-            var queueDesc = msgFactory.NamespaceManager.CreateQueue(new QueueDescription(QueueNames.GetTempQueueName().ToSafeAzureQueueName())
+            var queueDesc = msgFactory.NamespaceManager.CreateQueue(new QueueDescription(QueueNames.GetTempQueueName())
             {
                 AutoDeleteOnIdle = TimeSpan.FromMinutes(10),
                 EnableExpress = true
@@ -57,9 +58,7 @@ namespace ServiceStack.AzureServiceBus
             if (requeue)
                 queueClient.Abandon(lockToken);
             else
-            {
-                queueClient.DeadLetter(lockToken);
-            }
+                queueClient.DeadLetter(lockToken, new Dictionary<string, object>() { { "Error", message.Error.ToJson() } });
         }
 
         public void Notify(string queueName, IMessage message)

@@ -30,10 +30,10 @@ namespace ServiceStack.AzureServiceBus
         protected ConcurrentDictionary<string, MessageReceiver> MessageReceivers = new ConcurrentDictionary<string, MessageReceiver>();
 
         public virtual MessageReceiver GetMessageReceiver(string queueName) => 
-            MessageReceivers.GetOrAdd(queueName, key => MessagingFactory.CreateMessageReceiver(key.ToSafeAzureQueueName()));
+            MessageReceivers.GetOrAdd(queueName, key => MessagingFactory.CreateMessageReceiver(key));
 
         public virtual MessageSender GetMessageSender(string queueName) =>
-           MessageSenders.GetOrAdd(queueName, key => MessagingFactory.CreateMessageSender(key.ToSafeAzureQueueName()));
+           MessageSenders.GetOrAdd(queueName, key => MessagingFactory.CreateMessageSender(key));
 
         protected static HashSet<string> Queues = new HashSet<string>();
 

@@ -12,7 +12,7 @@ namespace ServiceStack.AzureServiceBus
         public NamespaceManager NamespaceManager { get; private set; }
 
         public MessagingFactory MessagingFactory { get; private set; }
-
+       
         /// <summary>
         /// Queue filter called before a queue gets created or updated.
         /// The first parameter is the queue name for ServiceStack. 
@@ -20,6 +20,21 @@ namespace ServiceStack.AzureServiceBus
         /// The queue description can be modified at this time.
         /// </summary>
         public Action<string, QueueDescription> CreateQueueFilter { get; set; }
+
+        static AzureBusMessageFactory()
+        {
+            QueueNames.MqPrefix = "";
+            QueueNames.TempMqPrefix = "tmp-";
+
+            var originalQueueNameFn = QueueNames.ResolveQueueNameFn;
+            QueueNames.ResolveQueueNameFn = (typeName, queueSuffix) =>
+            {
+                return originalQueueNameFn(
+                    typeName, 
+                    queueSuffix == ".dlq" ? ".inq/$deadletterqueue" : queueSuffix)
+                    .ToLower();
+            };
+        }
 
         public AzureBusMessageFactory(string connectionString)
         {
@@ -43,16 +58,12 @@ namespace ServiceStack.AzureServiceBus
 
         public void PurgeQueues(params string[] queues)
         {
-            queues.Select(x => x.ToSafeAzureQueueName())
-                .Where(q => !q.IsDeadLetterQueue())
-                .Each(q => MessagingFactory.CreateMessageReceiver(q).Purge());
+            queues.Select(x => x).Each(q => MessagingFactory.CreateMessageReceiver(q).Purge());
         }
 
         public Task PurgeQueuesAsync(params string[] queues)
         {
-            return Task.WhenAll(queues.Select(x => x.ToSafeAzureQueueName())
-                .Where(q => !q.IsDeadLetterQueue())
-                .Select(q => MessagingFactory.CreateMessageReceiver(q).PurgeAsync()));
+            return Task.WhenAll(queues.Select(q => MessagingFactory.CreateMessageReceiver(q).PurgeAsync()));
         }
 
         public void DeleteQueue<T>() => DeleteQueues(QueueNames<T>.AllQueueNames);
@@ -61,7 +72,7 @@ namespace ServiceStack.AzureServiceBus
 
         public void DeleteQueues(params string[] queues)
         {
-            queues.Select(x => x.ToSafeAzureQueueName())
+            queues.Select(x => x)
                 .Where(q => !q.IsDeadLetterQueue())
                 .Each(q => {
                     try {
@@ -73,7 +84,7 @@ namespace ServiceStack.AzureServiceBus
 
         public Task DeleteQueuesAsync(params string[] queues)
         {
-            return Task.WhenAll(queues.Select(x => x.ToSafeAzureQueueName())
+            return Task.WhenAll(queues.Select(x => x)
                 .Where(q => !q.IsDeadLetterQueue())
                 .Select(async q => {
                     try

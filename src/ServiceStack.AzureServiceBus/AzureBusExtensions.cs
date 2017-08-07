@@ -147,7 +147,7 @@ namespace ServiceStack.AzureServiceBus
 
         public static bool IsDeadLetterQueue(this string queueName)
         {
-            return queueName != null && queueName.EndsWith(".dlq");
+            return queueName != null && queueName.EndsWithInvariant("/$deadletterqueue");
         }
 
         private static QueueDescription TryGetQueue(this NamespaceManager namespaceMgr, string path)
@@ -163,7 +163,7 @@ namespace ServiceStack.AzureServiceBus
         {
             if (!QueueNames.IsTempQueue(queueName))
             {
-                var path = queueName.ToSafeAzureQueueName();
+                var path = queueName;
                 try
                 {
                     var queueDescription = namespaceMgr.TryGetQueue(path);
@@ -299,13 +299,6 @@ namespace ServiceStack.AzureServiceBus
             namespaceMgr.RegisterQueue(QueueNames<T>.Priority, createQueueFilter);
             namespaceMgr.RegisterQueue(QueueNames<T>.Out, createQueueFilter);
             // queueNames.Dlq is created by Azure Service Bus
-        }
-
-        public static string ToSafeAzureQueueName(this string queueName)
-        {
-            // valid characters are alpha numeric, period, hyphen and underscore
-            // lowercase the name for consistency given queue names are case insensitive
-            return Regex.Replace(queueName, @"[^\w\._-]", "-", RegexOptions.None).ToLower(); // replace invalid chars with hyphen
         }
 
         public static bool IsPriority(this IMessage message) => message.Priority > 0;

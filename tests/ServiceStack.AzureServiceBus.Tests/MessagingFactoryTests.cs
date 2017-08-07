@@ -3,6 +3,7 @@ using ServiceStack.AzureServiceBus;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus.Tests
 {
@@ -15,9 +16,11 @@ namespace ServiceStack.AzureServiceBus.Tests
     public class MessagingFactoryTests
     {
         [Test]
-        public void Send_receive_from_queue_dto()
+        public async Task Send_receive_from_queue_dto()
         {
             IMessageFactory messagingFactory = new AzureBusMessageFactory(Config.AzureBusConnectionString);
+
+            await messagingFactory.PurgeQueueAsync<Sample>();
 
             var messageClient = messagingFactory.CreateMessageQueueClient();
 
@@ -28,9 +31,11 @@ namespace ServiceStack.AzureServiceBus.Tests
         }
 
         [Test]
-        public void Send_receive_from_queue_message()
+        public async Task Send_receive_from_queue_message()
         {
             IMessageFactory messagingFactory = new AzureBusMessageFactory(Config.AzureBusConnectionString);
+
+            await messagingFactory.PurgeQueueAsync<Sample>();
 
             var messageClient = messagingFactory.CreateMessageQueueClient();
 
@@ -59,7 +64,6 @@ namespace ServiceStack.AzureServiceBus.Tests
             Assert.That(msg.Priority, Is.EqualTo(sentMsg.Priority));
             Assert.That(msg.ReplyId, Is.EqualTo(sentMsg.ReplyId));
             Assert.That(msg.Tag, Is.Not.Null);
-            Assert.That(msg.Meta.Count, Is.EqualTo(2));
             Assert.That(msg.Meta["Meta1"], Is.EqualTo("Foo"));
             Assert.That(msg.Meta["Meta2"], Is.EqualTo("Bar"));
         }

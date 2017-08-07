@@ -352,8 +352,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 foreach (var queueName in queueDescriptions.Keys)
                 {
                     var desc = queueDescriptions[queueName];
-                    Assert.That(queueName, Is.Not.EqualTo(desc.Path));
-                    Assert.That(queueName.ToSafeAzureQueueName(), Is.EqualTo(desc.Path));
+                    Assert.That(queueName, Is.EqualTo(desc.Path));
                     Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
                 }
             }
@@ -387,8 +386,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 foreach (var queueName in queueDescriptions.Keys)
                 {
                     var desc = queueDescriptions[queueName];
-                    Assert.That(queueName, Is.Not.EqualTo(desc.Path));
-                    Assert.That(queueName.ToSafeAzureQueueName(), Is.EqualTo(desc.Path));
+                    Assert.That(queueName, Is.EqualTo(desc.Path));
                     Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
                     Assert.That(desc.MaxDeliveryCount, Is.EqualTo(3));
                 }
