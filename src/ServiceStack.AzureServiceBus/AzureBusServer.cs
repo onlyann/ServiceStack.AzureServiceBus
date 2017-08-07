@@ -32,7 +32,7 @@ namespace ServiceStack.AzureServiceBus
 
         public List<Type> RegisteredTypes => msgHandlerFactoryMap.Keys.ToList();
 
-        private Action<string, QueueDescription> createQueueFilter = null;
+        private Action<QueueDescription> createQueueFilter = null;
 
         /// <summary>
         /// Queue filter called before a queue gets created or updated.
@@ -40,7 +40,7 @@ namespace ServiceStack.AzureServiceBus
         /// Azure queue name can be accessed in the queue description object.
         /// The queue description can be modified at this time.
         /// </summary>
-        public Action<string, QueueDescription> CreateQueueFilter
+        public Action<QueueDescription> CreateQueueFilter
         {
             get => createQueueFilter;
             set

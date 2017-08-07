@@ -19,7 +19,7 @@ namespace ServiceStack.AzureServiceBus
         /// Azure queue name can be accessed in the queue description object.
         /// The queue description can be modified at this time.
         /// </summary>
-        public Action<string, QueueDescription> CreateQueueFilter { get; set; }
+        public Action<QueueDescription> CreateQueueFilter { get; set; }
 
         static AzureBusMessageFactory()
         {

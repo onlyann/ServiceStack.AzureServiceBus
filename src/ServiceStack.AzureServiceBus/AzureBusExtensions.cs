@@ -136,7 +136,7 @@ namespace ServiceStack.AzureServiceBus
         public static void RegisterQueueByName(
             this NamespaceManager namespaceMgr, 
             string queueName, 
-            Action<string, QueueDescription> createQueueFilter = null)
+            Action<QueueDescription> createQueueFilter = null)
         {
             if (queueName.IsDeadLetterQueue())
                 // Dead letter Queues is created in Azure Service Bus
@@ -159,7 +159,7 @@ namespace ServiceStack.AzureServiceBus
         public static void RegisterQueue(
             this NamespaceManager namespaceMgr, 
             string queueName, 
-            Action<string, QueueDescription> createQueueFilter = null)
+            Action<QueueDescription> createQueueFilter = null)
         {
             if (!QueueNames.IsTempQueue(queueName))
             {
@@ -173,7 +173,7 @@ namespace ServiceStack.AzureServiceBus
 
                     if (createQueueFilter != null)
                     {
-                        createQueueFilter.Invoke(queueName, queueDescription);
+                        createQueueFilter.Invoke(queueDescription);
 
                         // the queue may have been deleted/created as part of the filter, verify its status
                         queueExists = namespaceMgr.TryGetQueue(path) != null;
@@ -283,7 +283,7 @@ namespace ServiceStack.AzureServiceBus
         public static void RegisterQueues(
             this NamespaceManager namespaceMgr, 
             QueueNames queueNames,
-            Action<string, QueueDescription> createQueueFilter = null)
+            Action<QueueDescription> createQueueFilter = null)
         {
             namespaceMgr.RegisterQueue(queueNames.In, createQueueFilter);
             namespaceMgr.RegisterQueue(queueNames.Priority, createQueueFilter);
@@ -293,7 +293,7 @@ namespace ServiceStack.AzureServiceBus
 
         public static void RegisterQueues<T>(
             this NamespaceManager namespaceMgr,
-            Action<string, QueueDescription> createQueueFilter = null)
+            Action<QueueDescription> createQueueFilter = null)
         {
             namespaceMgr.RegisterQueue(QueueNames<T>.In, createQueueFilter);
             namespaceMgr.RegisterQueue(QueueNames<T>.Priority, createQueueFilter);

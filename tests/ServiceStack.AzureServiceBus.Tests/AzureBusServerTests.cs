@@ -331,14 +331,14 @@ namespace ServiceStack.AzureServiceBus.Tests
         [Test]
         public async Task Can_change_queue_settings_before_creation()
         {
-            var queueDescriptions = new Dictionary<string, QueueDescription>();
+            var queueDescriptions = new List<QueueDescription>();
 
             using (var mqHost = CreateMqServer())
             {
                 await mqHost.MessageFactory.DeleteQueueAsync<Hello>();
 
-                mqHost.CreateQueueFilter = (queueName, description) => {
-                    queueDescriptions[queueName] = description;
+                mqHost.CreateQueueFilter = (description) => {
+                    queueDescriptions.Add(description);
                     description.MaxSizeInMegabytes = 3072;
                 };
 
@@ -349,10 +349,8 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 // priority, normal and out queues
                 Assert.That(queueDescriptions.Count, Is.EqualTo(3));
-                foreach (var queueName in queueDescriptions.Keys)
+                foreach (var desc in queueDescriptions)
                 {
-                    var desc = queueDescriptions[queueName];
-                    Assert.That(queueName, Is.EqualTo(desc.Path));
                     Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
                 }
             }
@@ -361,18 +359,18 @@ namespace ServiceStack.AzureServiceBus.Tests
         [Test]
         public void Can_update_queue_settings_when_already_present()
         {
-            var queueDescriptions = new Dictionary<string, QueueDescription>();
+            var queueDescriptions = new List<QueueDescription>();
 
             using (var mqHost = CreateMqServer())
             {
                 var nsMgr = (mqHost.MessageFactory as AzureBusMessageFactory).NamespaceManager;
-                nsMgr.RegisterQueues<Hello>((queueName, desc) =>
+                nsMgr.RegisterQueues<Hello>(desc =>
                 {
                     desc.MaxDeliveryCount = 3;
                 });
 
-                mqHost.CreateQueueFilter = (queueName, description) => {
-                    queueDescriptions[queueName] = description;
+                mqHost.CreateQueueFilter = (description) => {
+                    queueDescriptions.Add(description);
                     description.MaxSizeInMegabytes = 3072;
                 };
 
@@ -383,10 +381,8 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 // priority, normal and out queues
                 Assert.That(queueDescriptions.Count, Is.EqualTo(3));
-                foreach (var queueName in queueDescriptions.Keys)
+                foreach (var desc in queueDescriptions)
                 {
-                    var desc = queueDescriptions[queueName];
-                    Assert.That(queueName, Is.EqualTo(desc.Path));
                     Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
                     Assert.That(desc.MaxDeliveryCount, Is.EqualTo(3));
                 }
