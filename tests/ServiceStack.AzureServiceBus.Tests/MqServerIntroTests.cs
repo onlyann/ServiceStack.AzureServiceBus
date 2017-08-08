@@ -25,6 +25,16 @@ namespace ServiceStack.AzureServiceBus.Tests
         public string Name { get; set; }
     }
 
+    public class HelloFail : IReturn<HelloFailResponse>
+    {
+        public string Name { get; set; }
+    }
+
+    public class HelloFailResponse
+    {
+        public string Result { get; set; }
+    }
+
     public class HelloIntroResponse
     {
         public string Result { get; set; }
@@ -203,9 +213,9 @@ namespace ServiceStack.AzureServiceBus.Tests
         {
             using (var mqServer = CreateMqServer(retryCount: 1))
             {
-                await mqServer.MessageFactory.PurgeQueueAsync<HelloIntro>();
+                await mqServer.MessageFactory.PurgeQueueAsync<HelloFail>();
                 var called = 0;
-                mqServer.RegisterHandler<HelloIntro>(m =>
+                mqServer.RegisterHandler<HelloFail>(m =>
                 {
                     Interlocked.Increment(ref called);
                     throw new ArgumentException("Name");
@@ -214,9 +224,9 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 using (var mqClient = mqServer.CreateMessageQueueClient())
                 {
-                    mqClient.Publish(new HelloIntro { Name = "World" });
+                    mqClient.Publish(new HelloFail { Name = "World" });
 
-                    IMessage<HelloIntro> dlqMsg = mqClient.Get<HelloIntro>(QueueNames<HelloIntro>.Dlq, Config.ServerWaitTime);
+                    IMessage<HelloFail> dlqMsg = mqClient.Get<HelloFail>(QueueNames<HelloFail>.Dlq, Config.ServerWaitTime);
                     mqClient.Ack(dlqMsg);
 
                     Assert.That(called, Is.EqualTo(2));
