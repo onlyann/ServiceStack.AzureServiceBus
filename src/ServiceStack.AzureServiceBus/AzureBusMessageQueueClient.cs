@@ -26,8 +26,11 @@ namespace ServiceStack.AzureServiceBus
             var brokeredMsg = GetMessage(queueName, timeOut);
 
             // need to keep track of queue name for Ack
-            brokeredMsg.SetQueueName(queueName);
-
+            if (brokeredMsg != null)
+            {
+                brokeredMsg.SetQueueName(queueName);
+            }
+            
             return brokeredMsg.ToMessage<T>();
         }
 

@@ -100,6 +100,8 @@ namespace ServiceStack.AzureServiceBus
             EnsureQueueRegistered(queueName);
 
             var queueClient = GetMessageSender(queueName);
+
+            messages.Each(m => m.RemoveQueueName());
             queueClient.SendBatch(messages);
         }
 
@@ -117,6 +119,8 @@ namespace ServiceStack.AzureServiceBus
             EnsureQueueRegistered(queueName);
 
             var queueClient = GetMessageSender(queueName);
+
+            message.RemoveQueueName();
             queueClient.Send(message);
         }
 

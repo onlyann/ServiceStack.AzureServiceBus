@@ -75,6 +75,11 @@ namespace ServiceStack.AzureServiceBus
             brokeredMessage.Properties["QueueName"] = queueName;
         }
 
+        internal static void RemoveQueueName(this BrokeredMessage brokeredMessage)
+        {
+            brokeredMessage.Properties.Remove("QueueName");
+        }
+
         internal static string QueueName(this IMessage message)
         {
             if (message?.Meta == null) return null;

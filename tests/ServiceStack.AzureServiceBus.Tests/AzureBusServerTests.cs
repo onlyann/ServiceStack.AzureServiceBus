@@ -149,7 +149,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     Assert.That(called, Is.EqualTo(1 + incr.Value));
                     Thread.Sleep(100);
-                }, TimeSpan.FromSeconds(5));
+                }, TimeSpan.FromSeconds(10));
             }
         }
 
@@ -196,7 +196,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                     {
                         Assert.That(messageReceived, Is.EqualTo("Hello, ServiceStack"));
                         Thread.Sleep(100);
-                    }, TimeSpan.FromSeconds(5));
+                    }, TimeSpan.FromSeconds(10));
                 }
             }
         }
@@ -221,7 +221,6 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 mqHost.RegisterHandler<Wait>(m => {
                     Interlocked.Increment(ref timesCalled);
-                    Console.WriteLine(timesCalled);
                     Thread.Sleep(m.GetBody().ForMs);
                     return null;
                 }, noOfThreads);
@@ -230,13 +229,13 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 using (var mqClient = mqHost.CreateMessageQueueClient() as IMessageProducerExtended)
                 {
-                    mqClient.PublishAll(msgCount.Times(() => new Wait { ForMs = 100 }));
+                    mqClient.PublishAll(msgCount.Times(() => new Wait { ForMs = 50 }));
 
                     ExecUtils.RetryOnException(() =>
                     {
                         Assert.That(timesCalled, Is.EqualTo(msgCount));
-                        Thread.Sleep(100);
-                    }, TimeSpan.FromSeconds(100));
+                        Thread.Sleep(200);
+                    }, TimeSpan.FromSeconds(10));
                 }
             }
         }
@@ -253,13 +252,6 @@ namespace ServiceStack.AzureServiceBus.Tests
                 Assert.That(msg.GetBody().Name, Is.EqualTo("Foo"));
             }
         }
-
-        //[Test]
-        //[Ignore("not implemented yet")]
-        //public void Can_filter_published_and_received_messages()
-        //{
-        //    throw new NotImplementedException();
-        //}
 
         [Test]
         public async Task Messages_with_null_Response_is_published_to_OutMQ()
@@ -280,7 +272,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     mqClient.Publish(new HelloNull { Name = "Into the Void" });
 
-                    var msg = mqClient.Get<HelloNull>(QueueNames<HelloNull>.Out, TimeSpan.FromSeconds(5));
+                    var msg = mqClient.Get<HelloNull>(QueueNames<HelloNull>.Out, TimeSpan.FromSeconds(10));
                     Assert.That(msg, Is.Not.Null);
 
                     HelloNull response = msg.GetBody();
@@ -316,7 +308,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                         ReplyTo = replyMq
                     });
 
-                    var msg = mqClient.Get<HelloNull>(replyMq, TimeSpan.FromSeconds(5));
+                    var msg = mqClient.Get<HelloNull>(replyMq, TimeSpan.FromSeconds(10));
 
                     HelloNull response = msg.GetBody();
                     Assert.That(response.Name, Is.EqualTo("Into the Void"));
