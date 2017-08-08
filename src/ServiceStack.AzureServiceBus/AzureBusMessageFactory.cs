@@ -52,35 +52,14 @@ namespace ServiceStack.AzureServiceBus
 
         public virtual IMessageQueueClient CreateMessageQueueClient() => new AzureBusMessageQueueClient(this);
 
-        public void PurgeQueue<T>() => PurgeQueues(QueueNames<T>.AllQueueNames);
-
         public Task PurgeQueueAsync<T>() => PurgeQueuesAsync(QueueNames<T>.AllQueueNames);
-
-        public void PurgeQueues(params string[] queues)
-        {
-            queues.Select(x => x).Each(q => MessagingFactory.CreateMessageReceiver(q).Purge());
-        }
 
         public Task PurgeQueuesAsync(params string[] queues)
         {
-            return Task.WhenAll(queues.Select(q => MessagingFactory.CreateMessageReceiver(q).PurgeAsync()));
+            return Task.WhenAll(queues.Select(async q => (await MessagingFactory.CreateMessageReceiverAsync(q).ConfigureAwait(false)).PurgeAsync()));
         }
-
-        public void DeleteQueue<T>() => DeleteQueues(QueueNames<T>.AllQueueNames);
 
         public Task DeleteQueueAsync<T>() => DeleteQueuesAsync(QueueNames<T>.AllQueueNames);
-
-        public void DeleteQueues(params string[] queues)
-        {
-            queues.Select(x => x)
-                .Where(q => !q.IsDeadLetterQueue())
-                .Each(q => {
-                    try {
-                        NamespaceManager.DeleteQueue(q);
-                    }
-                    catch (MessagingEntityNotFoundException) { /* not present */ }
-                  });
-        }
 
         public Task DeleteQueuesAsync(params string[] queues)
         {

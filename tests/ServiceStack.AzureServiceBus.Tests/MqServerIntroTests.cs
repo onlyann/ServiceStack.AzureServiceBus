@@ -165,7 +165,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     mqClient.Publish(new HelloIntro { Name = "World" });
 
-                    IMessage<HelloIntro> msgCopy = mqClient.Get<HelloIntro>(QueueNames<HelloIntro>.Out);
+                    IMessage<HelloIntro> msgCopy = mqClient.Get<HelloIntro>(QueueNames<HelloIntro>.Out, TimeSpan.FromSeconds(5));
                     mqClient.Ack(msgCopy);
                     Assert.That(msgCopy.GetBody().Name, Is.EqualTo("World"));
                 }
@@ -214,13 +214,13 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     mqClient.Publish(new HelloIntro { Name = "World" });
 
-                    IMessage<HelloIntro> dlqMsg = mqClient.Get<HelloIntro>(QueueNames<HelloIntro>.Dlq);
+                    IMessage<HelloIntro> dlqMsg = mqClient.Get<HelloIntro>(QueueNames<HelloIntro>.Dlq, TimeSpan.FromSeconds(5));
                     mqClient.Ack(dlqMsg);
 
                     Assert.That(called, Is.EqualTo(2));
                     Assert.That(dlqMsg.GetBody().Name, Is.EqualTo("World"));
-                    Assert.That(dlqMsg.Error.ErrorCode, Is.EqualTo(typeof(ArgumentException).Name));
-                    Assert.That(dlqMsg.Error.Message, Is.EqualTo("Name"));
+                    Assert.That(dlqMsg.Error?.ErrorCode, Is.EqualTo(typeof(ArgumentException).Name));
+                    Assert.That(dlqMsg.Error?.Message, Is.EqualTo("Name"));
                 }
             }
         }
@@ -269,7 +269,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     mqClient.Publish(new HelloIntro { Name = "World" });
 
-                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
+                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In, TimeSpan.FromSeconds(5));
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, World!"));
                 }
@@ -302,7 +302,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Foo!"));
 
-                    responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
+                    responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In, TimeSpan.FromSeconds(5));
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Bar!"));
                 }
@@ -327,7 +327,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                         Name = "MQ Restriction",
                     });
 
-                    var responseMsg = mqClient.Get<MqRestrictionResponse>(QueueNames<MqRestrictionResponse>.In);
+                    var responseMsg = mqClient.Get<MqRestrictionResponse>(QueueNames<MqRestrictionResponse>.In, TimeSpan.FromSeconds(5));
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result,
                         Is.EqualTo("MQ Restriction"));
@@ -367,7 +367,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                         SessionId = sessionId,
                     });
 
-                    var responseMsg = mqClient.Get<MqAuthOnlyResponse>(QueueNames<MqAuthOnlyResponse>.In);
+                    var responseMsg = mqClient.Get<MqAuthOnlyResponse>(QueueNames<MqAuthOnlyResponse>.In, TimeSpan.FromSeconds(5));
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result,
                         Is.EqualTo("Hello, MQ Auth! Your UserName is mythz"));
@@ -398,7 +398,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                 {
                     mqClient.Publish(new HelloIntro { Name = "World" });
 
-                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
+                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In, TimeSpan.FromSeconds(5));
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, World!"));
                 }

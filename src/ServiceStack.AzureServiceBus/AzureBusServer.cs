@@ -5,6 +5,7 @@ using ServiceStack.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus
 {
@@ -131,7 +132,9 @@ namespace ServiceStack.AzureServiceBus
                 throw new ObjectDisposedException("MQ Host has been disposed");
         }
 
-        public void Start()
+        public void Start() => Task.Run(StartAsync).GetAwaiter().GetResult();
+
+        public async Task StartAsync()
         {
             if (status == WorkerStatus.Started) return;
 
@@ -139,7 +142,7 @@ namespace ServiceStack.AzureServiceBus
 
             status = WorkerStatus.Starting;
 
-            Init();
+            await Init().ConfigureAwait(false);
 
             if (messagePumps == null || messagePumps.Length == 0)
             {
@@ -148,12 +151,12 @@ namespace ServiceStack.AzureServiceBus
                 return;
             }
 
-            StartMessagePumps();
+            await StartMessagePumps().ConfigureAwait(false);
 
             status = WorkerStatus.Started;
         }
 
-        public virtual void Init()
+        public virtual async Task Init()
         {
             if (messagePumps != null) return;
 
@@ -179,57 +182,60 @@ namespace ServiceStack.AzureServiceBus
                              queueNames.In,
                              noOfThreads));
 
-                messageFactory.NamespaceManager.RegisterQueues(queueNames, createQueueFilter);
+                await messageFactory.NamespaceManager.RegisterQueuesAsync(queueNames, createQueueFilter).ConfigureAwait(false);
             }
 
             messagePumps = msgPumpsBuilder.ToArray();
         }
 
-        public virtual void StartMessagePumps()
+        public virtual Task StartMessagePumps()
         {
             Log.Debug("Starting all Azure Bus message pumps...");
 
-            foreach (var msgPump in messagePumps)
-            {
-                try
+            return Task.WhenAll(messagePumps.Select(msgPump =>
+                Task.Run(() =>
                 {
-                    msgPump.Start();
-                }
-                catch (Exception exception)
-                {
-                    Log.Warn($"Could not START Azure message pump {exception}");
-                    throw;
-                }
-            }
+                    try
+                    {
+                        msgPump.Start();
+                    }
+                    catch (Exception exception)
+                    {
+                        Log.Warn($"Could not START Azure message pump {exception}");
+                        throw;
+                    }
+                })));
         }
 
-        public virtual void StopMessagePumps()
+        public virtual Task StopMessagePumps()
         {
             Log.Debug("Stopping all Azure Bus message pumps...");
 
-            if (messagePumps == null) return;
+            if (messagePumps == null) Task.FromResult(0);
 
-            foreach (var msgPump in messagePumps)
+            return Task.WhenAll(messagePumps.Select(async msgPump =>
             {
                 try
                 {
-                    msgPump.Stop();
+                    await msgPump.StopAsync();
                 }
                 catch (Exception exception)
                 {
                     Log.Warn($"Could not STOP Azure Bus message pump {exception}");
                     throw;
                 }
-            }
+            }));
         }
 
-        public void Stop()
+        public void Stop() => Task.Run(StopAsync).GetAwaiter().GetResult();
+
+        public async Task StopAsync()
         {
             ThrowsIfDisposed();
             if (status == WorkerStatus.Stopped) return;
 
             status = WorkerStatus.Stopping;
-            StopMessagePumps();
+            await StopMessagePumps().ConfigureAwait(false);
             status = WorkerStatus.Stopped;
         }
 
@@ -241,16 +247,6 @@ namespace ServiceStack.AzureServiceBus
 
             Stop();
             status = WorkerStatus.Disposed;
-
-            try
-            {
-                messagePumps?.Each(x => x.Dispose());
-            }
-            
-            catch (Exception ex)
-            {
-                Log.Error("Error DisposeWorkerThreads(): ", ex);
-            }
         }
     }
 }

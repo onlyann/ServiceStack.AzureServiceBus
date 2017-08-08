@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus
 {
@@ -187,20 +188,18 @@ namespace ServiceStack.AzureServiceBus
             return queueClient.Receive(serverWaitTime ?? TimeSpan.MaxValue);
         }
 
-        public void Dispose()
+        public async Task CloseAsync()
         {
-            foreach (var msgSender in MessageSenders.Values)
-            {
-                msgSender.Close();
-            }
-
-            foreach(var msgReceiver in MessageReceivers.Values)
-            {
-                msgReceiver.Close();
-            }
-
+            var tasks = MessageSenders.Values.Select(x => x.CloseAsync())
+                .Concat(MessageReceivers.Values.Select(x => x.CloseAsync()));
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+           
             MessageSenders.Clear();
             MessageReceivers.Clear();
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

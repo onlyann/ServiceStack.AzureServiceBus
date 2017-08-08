@@ -299,7 +299,7 @@ namespace ServiceStack.AzureServiceBus.Tests
             int msgsReceived = 0;
             using (var mqServer = CreateMqServer())
             {
-                await mqServer.MessageFactory.PurgeQueueAsync<HelloNull>();
+                await mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<HelloNull>.In);
                 mqServer.RegisterHandler<HelloNull>(m =>
                 {
                     Interlocked.Increment(ref msgsReceived);
@@ -316,12 +316,9 @@ namespace ServiceStack.AzureServiceBus.Tests
                         ReplyTo = replyMq
                     });
 
-                    var msg = mqClient.Get<HelloNull>(replyMq);
+                    var msg = mqClient.Get<HelloNull>(replyMq, TimeSpan.FromSeconds(5));
 
                     HelloNull response = msg.GetBody();
-
-                    Thread.Sleep(100);
-
                     Assert.That(response.Name, Is.EqualTo("Into the Void"));
                     Assert.That(msgsReceived, Is.EqualTo(1));
                 }
@@ -357,14 +354,14 @@ namespace ServiceStack.AzureServiceBus.Tests
         }
 
         [Test]
-        public void Can_update_queue_settings_when_already_present()
+        public async Task Can_update_queue_settings_when_already_present()
         {
             var queueDescriptions = new List<QueueDescription>();
 
             using (var mqHost = CreateMqServer())
             {
                 var nsMgr = (mqHost.MessageFactory as AzureBusMessageFactory).NamespaceManager;
-                nsMgr.RegisterQueues<Hello>(desc =>
+                await nsMgr.RegisterQueuesAsync<Hello>(desc =>
                 {
                     desc.MaxDeliveryCount = 3;
                 });

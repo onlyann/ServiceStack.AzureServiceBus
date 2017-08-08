@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus
@@ -156,57 +155,47 @@ namespace ServiceStack.AzureServiceBus
             return namespaceMgr.GetQueues($"startswith(path, '{path}') eq true").FirstOrDefault();
         }
 
+        private static async Task<QueueDescription> TryGetQueueAsync(this NamespaceManager namespaceMgr, string path)
+        {
+            // much faster than catch exception with GetQueue
+            return (await namespaceMgr.GetQueuesAsync($"startswith(path, '{path}') eq true").ConfigureAwait(false)).FirstOrDefault();
+        }
+
         public static void RegisterQueue(
             this NamespaceManager namespaceMgr, 
             string queueName, 
             Action<QueueDescription> createQueueFilter = null)
         {
-            if (!QueueNames.IsTempQueue(queueName))
-            {
-                var path = queueName;
-                try
-                {
-                    var queueDescription = namespaceMgr.TryGetQueue(path);
-                    var queueExists = queueDescription != null;
-                    if (queueDescription == null)
-                        queueDescription = new QueueDescription(path);
+            if (QueueNames.IsTempQueue(queueName)) return;
 
-                    if (createQueueFilter != null)
-                    {
-                        createQueueFilter.Invoke(queueDescription);
+            var queueDesc = namespaceMgr.TryGetQueue(queueName);
+            var queueExists = queueDesc != null;
+            if (queueDesc == null)
+                queueDesc = new QueueDescription(queueName);
 
-                        // the queue may have been deleted/created as part of the filter, verify its status
-                        queueExists = namespaceMgr.TryGetQueue(path) != null;
-                    }
-                    
-                    if (queueExists)
-                    {
-                        namespaceMgr.UpdateQueue(queueDescription);
-                    }
-                    else
-                    {
-                        namespaceMgr.CreateQueue(queueDescription);
-                    }
-                }
-                catch (MessagingEntityAlreadyExistsException) { /* queue already created */ }
-            }
+            createQueueFilter?.Invoke(queueDesc);
+
+            if (queueExists)
+                namespaceMgr.UpdateQueue(queueDesc);
+            else
+                namespaceMgr.CreateQueue(queueDesc);
         }
 
-        public static void Purge(this MessageReceiver msgReceiver, int maxBatchSize = 10)
+        public static async Task RegisterQueueAsync(
+            this NamespaceManager namespaceMgr,
+            string queueName,
+            Action<QueueDescription> createQueueFilter = null)
         {
-            try
-            {
-                while (msgReceiver.Peek() != null)
-                {
-                    var messages = msgReceiver.ReceiveBatch(maxBatchSize, TimeSpan.Zero);
-                    if (messages != null)
-                        msgReceiver.CompleteBatch(messages.Select(m => m.LockToken));
-                }
-            }
-            catch (MessagingEntityNotFoundException)
-            {
-                // ignore when queue/topic does not exist
-            }
+            if (QueueNames.IsTempQueue(queueName)) return;
+
+            var queueDesc = await namespaceMgr.TryGetQueueAsync(queueName);
+            var queueExists = queueDesc != null;
+            if (queueDesc == null)
+                queueDesc = new QueueDescription(queueName);
+
+            createQueueFilter?.Invoke(queueDesc);
+
+            await (queueExists ? (namespaceMgr.UpdateQueueAsync(queueDesc)) : (namespaceMgr.CreateQueueAsync(queueDesc)));
         }
 
         public static async Task PurgeAsync(this MessageReceiver msgReceiver, int maxBatchSize = 10)
@@ -216,7 +205,7 @@ namespace ServiceStack.AzureServiceBus
                 while ((await msgReceiver.PeekAsync().ConfigureAwait(false)) != null)
                 {
                     var messages = await msgReceiver.ReceiveBatchAsync(maxBatchSize, TimeSpan.Zero).ConfigureAwait(false);
-                    var lockTokens = messages != null ? messages.Select(m => m.LockToken).ToList() : null;
+                    var lockTokens = messages?.Select(m => m.LockToken).ToList();
 
                     if (!lockTokens.IsEmpty())
                     {
@@ -238,20 +227,6 @@ namespace ServiceStack.AzureServiceBus
             return azureMgFactory;
         }
 
-        public static void PurgeQueue<T>(this IMessageFactory msgFactory)
-        {
-            msgFactory
-                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
-                .PurgeQueue<T>();
-        }
-
-        public static void PurgeQueues(this IMessageFactory msgFactory, params string[] queues)
-        {
-            msgFactory
-                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
-                .PurgeQueues(queues);
-        }
-
         public static Task PurgeQueuesAsync(this IMessageFactory msgFactory, params string[] queues)
         {
             return msgFactory
@@ -266,13 +241,6 @@ namespace ServiceStack.AzureServiceBus
                 .PurgeQueueAsync<T>();
         }
 
-        public static void DeleteQueue<T>(this IMessageFactory msgFactory)
-        {
-            msgFactory
-                .ToAzureMessageFactoryOrThrow(nameof(msgFactory))
-                .DeleteQueue<T>();
-        }
-
         public static Task DeleteQueueAsync<T>(this IMessageFactory msgFactory)
         {
             return msgFactory
@@ -280,25 +248,23 @@ namespace ServiceStack.AzureServiceBus
                 .DeleteQueueAsync<T>();
         }
 
-        public static void RegisterQueues(
-            this NamespaceManager namespaceMgr, 
+        public static Task RegisterQueuesAsync(
+            this NamespaceManager namespaceMgr,
             QueueNames queueNames,
             Action<QueueDescription> createQueueFilter = null)
         {
-            namespaceMgr.RegisterQueue(queueNames.In, createQueueFilter);
-            namespaceMgr.RegisterQueue(queueNames.Priority, createQueueFilter);
-            namespaceMgr.RegisterQueue(queueNames.Out, createQueueFilter);
+            return Task.WhenAll(
+            namespaceMgr.RegisterQueueAsync(queueNames.In, createQueueFilter),
+            namespaceMgr.RegisterQueueAsync(queueNames.Priority, createQueueFilter),
+            namespaceMgr.RegisterQueueAsync(queueNames.Out, createQueueFilter));
             // queueNames.Dlq is created by Azure Service Bus
         }
 
-        public static void RegisterQueues<T>(
+        public static Task RegisterQueuesAsync<T>(
             this NamespaceManager namespaceMgr,
             Action<QueueDescription> createQueueFilter = null)
         {
-            namespaceMgr.RegisterQueue(QueueNames<T>.In, createQueueFilter);
-            namespaceMgr.RegisterQueue(QueueNames<T>.Priority, createQueueFilter);
-            namespaceMgr.RegisterQueue(QueueNames<T>.Out, createQueueFilter);
-            // queueNames.Dlq is created by Azure Service Bus
+            return namespaceMgr.RegisterQueuesAsync(new QueueNames(typeof(T)), createQueueFilter);
         }
 
         public static bool IsPriority(this IMessage message) => message.Priority > 0;

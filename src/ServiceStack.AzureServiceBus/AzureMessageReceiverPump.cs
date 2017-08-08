@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ServiceStack.AzureServiceBus
 {
-    public class AzureMessageReceiverPump : IDisposable
+    public class AzureMessageReceiverPump
     {
         public string QueueName { get; private set; }
 
@@ -88,23 +88,13 @@ namespace ServiceStack.AzureServiceBus
             return stats;
         }
 
-        public virtual void Stop()
-        {
-            DisposeMqClient();
-        }
-
-        protected virtual void DisposeMqClient()
+        public virtual async Task StopAsync()
         {
             if (mqClient != null)
             {
-                mqClient.Dispose();
+                await mqClient.CloseAsync();
                 mqClient = null;
             }
-        }
-
-        public void Dispose()
-        {
-            DisposeMqClient();
         }
     }
 }
