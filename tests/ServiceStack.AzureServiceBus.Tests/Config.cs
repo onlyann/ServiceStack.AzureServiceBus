@@ -1,4 +1,5 @@
 ﻿using ServiceStack.Configuration;
+using System;
 
 namespace ServiceStack.AzureServiceBus.Tests
 {
@@ -14,5 +15,7 @@ namespace ServiceStack.AzureServiceBus.Tests
             );
 
         public static string AzureBusConnectionString = AppSettings.GetString("AzureBusConnectionString");
+
+        public static TimeSpan ServerWaitTime = AppSettings.Get("ServerWaitTime", TimeSpan.FromSeconds(30));
     }
 }

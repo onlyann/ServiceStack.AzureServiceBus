@@ -30,6 +30,7 @@ namespace ServiceStack.AzureServiceBus.Tests
     }
 
     [TestFixture, Category("Integration")]
+    [NonParallelizable]
     public class AzureBusServerTests
     {
         static readonly string ConnectionString = Config.AzureBusConnectionString;
