@@ -175,15 +175,23 @@ namespace ServiceStack.AzureServiceBus
 
             var queueDesc = namespaceMgr.TryGetQueue(queueName);
             var queueExists = queueDesc != null;
-            if (queueDesc == null)
+
+            if (!queueExists)
                 queueDesc = new QueueDescription(queueName);
 
-            createQueueFilter?.Invoke(queueDesc);
+            bool hasQueueDefChanged = false;
 
-            if (queueExists)
-                namespaceMgr.UpdateQueue(queueDesc);
-            else
+            if (createQueueFilter != null)
+            {
+                var sourceQueueDef = queueExists ? queueDesc.ConvertTo<QueueDefinitionProps>() : null;
+                createQueueFilter.Invoke(queueDesc);
+                hasQueueDefChanged = queueExists && sourceQueueDef.Equals(queueDesc.ConvertTo<QueueDefinitionProps>());
+            }
+
+            if (!queueExists)
                 namespaceMgr.CreateQueue(queueDesc);
+            else if (hasQueueDefChanged)
+                namespaceMgr.UpdateQueue(queueDesc);
         }
 
         public static async Task RegisterQueueAsync(
@@ -195,12 +203,23 @@ namespace ServiceStack.AzureServiceBus
 
             var queueDesc = await namespaceMgr.TryGetQueueAsync(queueName);
             var queueExists = queueDesc != null;
-            if (queueDesc == null)
+
+            if (!queueExists)
                 queueDesc = new QueueDescription(queueName);
 
-            createQueueFilter?.Invoke(queueDesc);
+            bool hasQueueDefChanged = false;
 
-            await (queueExists ? (namespaceMgr.UpdateQueueAsync(queueDesc)) : (namespaceMgr.CreateQueueAsync(queueDesc)));
+            if (createQueueFilter != null)
+            {
+                var sourceQueueDef = queueExists ? queueDesc.ConvertTo<QueueDefinitionProps>() : null;
+                createQueueFilter.Invoke(queueDesc);
+                hasQueueDefChanged = queueExists && !sourceQueueDef.Equals(queueDesc.ConvertTo<QueueDefinitionProps>());
+            }
+
+            if (!queueExists)
+                await namespaceMgr.CreateQueueAsync(queueDesc);
+            else if (hasQueueDefChanged)
+                await namespaceMgr.UpdateQueueAsync(queueDesc);
         }
 
         public static async Task PurgeAsync(this MessageReceiver msgReceiver, int maxBatchSize = 10)
