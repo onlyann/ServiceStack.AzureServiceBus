@@ -63,6 +63,15 @@ namespace ServiceStack.AzureServiceBus
             set => messageFactory.GetMessageFilter = value;
         }
 
+        /// <summary>
+        /// Filter called every time before a message gets published.
+        /// </summary>
+        public Action<string, BrokeredMessage, IMessage> PublishMessageFilter
+        {
+            get => messageFactory.PublishMessageFilter;
+            set => messageFactory.PublishMessageFilter = value;
+        }
+
         private int status;
 
         public AzureBusServer(string connectionString): this(new AzureBusMessageFactory(connectionString))

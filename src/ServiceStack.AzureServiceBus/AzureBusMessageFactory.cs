@@ -28,6 +28,11 @@ namespace ServiceStack.AzureServiceBus
         /// </summary>
         public Action<string, BrokeredMessage> GetMessageFilter { get; set; }
 
+        /// <summary>
+        /// Filter called every time before a message gets published.
+        /// </summary>
+        public Action<string, BrokeredMessage, IMessage> PublishMessageFilter { get; set; }
+
         static AzureBusMessageFactory()
         {
             QueueNames.MqPrefix = "";
@@ -57,12 +62,14 @@ namespace ServiceStack.AzureServiceBus
 
         public virtual IMessageProducer CreateMessageProducer() => new AzureBusMessageProducer(this)
         {
-            GetMessageFilter = GetMessageFilter
+            GetMessageFilter = GetMessageFilter,
+            PublishMessageFilter = PublishMessageFilter       
         };
 
         public virtual IMessageQueueClient CreateMessageQueueClient() => new AzureBusMessageQueueClient(this)
         {
-            GetMessageFilter = GetMessageFilter
+            GetMessageFilter = GetMessageFilter,
+            PublishMessageFilter = PublishMessageFilter
         };
 
         public Task PurgeQueueAsync<T>() => PurgeQueuesAsync(QueueNames<T>.AllQueueNames);

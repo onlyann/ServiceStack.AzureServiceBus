@@ -252,17 +252,24 @@ namespace ServiceStack.AzureServiceBus.Tests
         }
 
         [Test]
-        public async Task Can_filter_received_messages()
+        public async Task Can_filter_published_and_received_messages()
         {
+            string receivedMsgApp = null;
             string receivedMsgType = null;
 
             using (var mqServer = CreateMqServer())
             {
                 await mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<Hello>.In, QueueNames<HelloResponse>.In);
 
+                mqServer.PublishMessageFilter = (queueName, brokeredMsg, message) =>
+                {
+                    brokeredMsg.Properties["AppId"] = "app:{0}".Fmt(queueName);
+                };
+
                 mqServer.GetMessageFilter = (queueName, brokeredMsg) =>
                 {
                     receivedMsgType = brokeredMsg.Label;
+                    receivedMsgApp = brokeredMsg.Properties["AppId"] as string;
                 };
 
                 mqServer.RegisterHandler<Hello>(m => {
@@ -278,12 +285,16 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 Thread.Sleep(100);
 
+                Assert.That(receivedMsgApp, Is.EqualTo("app:{0}".Fmt(QueueNames<Hello>.In)));
                 Assert.That(receivedMsgType, Is.EqualTo(typeof(Hello).Name));
 
                 using (var mqClient = mqServer.CreateMessageQueueClient() as AzureBusMessageQueueClient)
                 {
                     var brokeredMsg = mqClient.GetMessage(QueueNames<HelloResponse>.In);
+
                     Assert.That(brokeredMsg.Label, Is.EqualTo(typeof(HelloResponse).Name));
+                    Assert.That((string)brokeredMsg.Properties["AppId"], Is.EqualTo("app:{0}".Fmt(QueueNames<HelloResponse>.In)));
+
                     var msg = brokeredMsg.ToMessage<HelloResponse>();
                     Assert.That(msg.GetBody().Result, Is.EqualTo("Hello, Bugs Bunny!"));
                 }

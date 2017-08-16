@@ -49,6 +49,11 @@ namespace ServiceStack.AzureServiceBus
         /// </summary>
         public Action<string, BrokeredMessage> GetMessageFilter { get; set; }
 
+        /// <summary>
+        /// Filter called every time before a message gets published.
+        /// </summary>
+        public Action<string, BrokeredMessage, IMessage> PublishMessageFilter { get; set; }
+
         public AzureBusMessageProducer(AzureBusMessageFactory msgFactory)
         {
             msgFactory.ThrowIfNull(nameof(msgFactory));
@@ -93,12 +98,26 @@ namespace ServiceStack.AzureServiceBus
         public virtual void Publish(string queueName, IMessage message)
         {
             var brokeredMessage = message.ToBrokeredMessage();
+            brokeredMessage.RemoveQueueName();
+
+            PublishMessageFilter?.Invoke(queueName, brokeredMessage, message);
+
             Publish(queueName, brokeredMessage);
         }
 
         public virtual void PublishAll(string queueName, IEnumerable<IMessage> messages)
         {
-            var brokeredMessages = messages.Select(x => x.ToBrokeredMessage());
+            var brokeredMessages = new List<BrokeredMessage>();
+            messages.Each(msg =>
+            {
+                var brokeredMessage = msg.ToBrokeredMessage();
+                brokeredMessage.RemoveQueueName();
+
+                PublishMessageFilter?.Invoke(queueName, brokeredMessage, msg);
+
+                brokeredMessages.Add(brokeredMessage);
+            });
+
             PublishAll(queueName, brokeredMessages);
         }
 
@@ -108,7 +127,6 @@ namespace ServiceStack.AzureServiceBus
 
             var queueClient = GetMessageSender(queueName);
 
-            messages.Each(m => m.RemoveQueueName());
             queueClient.SendBatch(messages);
         }
 
@@ -127,7 +145,6 @@ namespace ServiceStack.AzureServiceBus
 
             var queueClient = GetMessageSender(queueName);
 
-            message.RemoveQueueName();
             queueClient.Send(message);
         }
 
