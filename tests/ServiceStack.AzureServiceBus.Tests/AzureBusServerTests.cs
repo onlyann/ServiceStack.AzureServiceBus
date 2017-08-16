@@ -1,14 +1,11 @@
 ﻿using Microsoft.ServiceBus.Messaging;
 using NUnit.Framework;
-using ServiceStack;
-using ServiceStack.AzureServiceBus;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

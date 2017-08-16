@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using ServiceStack.AzureServiceBus;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;

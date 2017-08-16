@@ -185,7 +185,7 @@ namespace ServiceStack.AzureServiceBus
             {
                 var sourceQueueDef = queueExists ? queueDesc.ConvertTo<QueueDefinitionProps>() : null;
                 createQueueFilter.Invoke(queueDesc);
-                hasQueueDefChanged = queueExists && sourceQueueDef.Equals(queueDesc.ConvertTo<QueueDefinitionProps>());
+                hasQueueDefChanged = queueExists && sourceQueueDef.EqualsTo(queueDesc.ConvertTo<QueueDefinitionProps>());
             }
 
             if (!queueExists)
@@ -213,7 +213,7 @@ namespace ServiceStack.AzureServiceBus
             {
                 var sourceQueueDef = queueExists ? queueDesc.ConvertTo<QueueDefinitionProps>() : null;
                 createQueueFilter.Invoke(queueDesc);
-                hasQueueDefChanged = queueExists && !sourceQueueDef.Equals(queueDesc.ConvertTo<QueueDefinitionProps>());
+                hasQueueDefChanged = queueExists && !sourceQueueDef.EqualsTo(queueDesc.ConvertTo<QueueDefinitionProps>());
             }
 
             if (!queueExists)

@@ -23,6 +23,6 @@ namespace ServiceStack.AzureServiceBus
         public bool SupportOrdering { get; set; }
         public string UserMetadata { get; set; }
 
-        public override bool Equals(object obj) => (obj is QueueDefinitionProps to) && this.ToJson() == to.ToJson();
+        public bool EqualsTo(QueueDefinitionProps to) => this.ToJson() == to.ToJson();
     }
 }
