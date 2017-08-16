@@ -71,6 +71,7 @@ namespace ServiceStack.AzureServiceBus
             var threadNumber = Interlocked.Increment(ref threadCount);
             try
             {
+                mqFactory.GetMessageFilter?.Invoke(QueueName, msg);
                 messageHandlers[threadNumber - 1].ProcessMessage(MqClient, msg);
             }
             finally

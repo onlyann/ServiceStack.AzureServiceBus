@@ -42,6 +42,13 @@ namespace ServiceStack.AzureServiceBus
 
         public MessagingFactory MessagingFactory { get => msgFactory.MessagingFactory; }
 
+        /// <summary>
+        /// Filter called every time a message is received.
+        /// The filter can also be called with a null message when the get message
+        /// results in a timeout.
+        /// </summary>
+        public Action<string, BrokeredMessage> GetMessageFilter { get; set; }
+
         public AzureBusMessageProducer(AzureBusMessageFactory msgFactory)
         {
             msgFactory.ThrowIfNull(nameof(msgFactory));
@@ -189,7 +196,11 @@ namespace ServiceStack.AzureServiceBus
             EnsureQueueRegistered(queueName);
 
             var queueClient = GetMessageReceiver(queueName);
-            return queueClient.Receive(serverWaitTime ?? TimeSpan.MaxValue);
+            var msg = queueClient.Receive(serverWaitTime ?? TimeSpan.MaxValue);
+
+            GetMessageFilter?.Invoke(queueName, msg);
+
+            return msg;
         }
 
         public async Task CloseAsync()

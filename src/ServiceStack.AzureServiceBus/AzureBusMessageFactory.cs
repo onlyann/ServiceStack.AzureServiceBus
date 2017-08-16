@@ -21,6 +21,13 @@ namespace ServiceStack.AzureServiceBus
         /// </summary>
         public Action<QueueDescription> CreateQueueFilter { get; set; }
 
+        /// <summary>
+        /// Filter called every time a message is received.
+        /// The filter can also be called with a null message when the get message
+        /// results in a timeout.
+        /// </summary>
+        public Action<string, BrokeredMessage> GetMessageFilter { get; set; }
+
         static AzureBusMessageFactory()
         {
             QueueNames.MqPrefix = "";
@@ -48,9 +55,15 @@ namespace ServiceStack.AzureServiceBus
             MessagingFactory = messagingFactory;
         }
 
-        public virtual IMessageProducer CreateMessageProducer() => new AzureBusMessageProducer(this);
+        public virtual IMessageProducer CreateMessageProducer() => new AzureBusMessageProducer(this)
+        {
+            GetMessageFilter = GetMessageFilter
+        };
 
-        public virtual IMessageQueueClient CreateMessageQueueClient() => new AzureBusMessageQueueClient(this);
+        public virtual IMessageQueueClient CreateMessageQueueClient() => new AzureBusMessageQueueClient(this)
+        {
+            GetMessageFilter = GetMessageFilter
+        };
 
         public Task PurgeQueueAsync<T>() => PurgeQueuesAsync(QueueNames<T>.AllQueueNames);
 

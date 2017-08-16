@@ -252,6 +252,45 @@ namespace ServiceStack.AzureServiceBus.Tests
         }
 
         [Test]
+        public async Task Can_filter_received_messages()
+        {
+            string receivedMsgType = null;
+
+            using (var mqServer = CreateMqServer())
+            {
+                await mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<Hello>.In, QueueNames<HelloResponse>.In);
+
+                mqServer.GetMessageFilter = (queueName, brokeredMsg) =>
+                {
+                    receivedMsgType = brokeredMsg.Label;
+                };
+
+                mqServer.RegisterHandler<Hello>(m => {
+                    return new HelloResponse { Result = "Hello, {0}!".Fmt(m.GetBody().Name) };
+                });
+
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new Hello { Name = "Bugs Bunny" });
+                }
+
+                Thread.Sleep(100);
+
+                Assert.That(receivedMsgType, Is.EqualTo(typeof(Hello).Name));
+
+                using (var mqClient = mqServer.CreateMessageQueueClient() as AzureBusMessageQueueClient)
+                {
+                    var brokeredMsg = mqClient.GetMessage(QueueNames<HelloResponse>.In);
+                    Assert.That(brokeredMsg.Label, Is.EqualTo(typeof(HelloResponse).Name));
+                    var msg = brokeredMsg.ToMessage<HelloResponse>();
+                    Assert.That(msg.GetBody().Result, Is.EqualTo("Hello, Bugs Bunny!"));
+                }
+            }
+        }
+
+        [Test]
         public async Task Messages_with_null_Response_is_published_to_OutMQ()
         {
             int msgsReceived = 0;

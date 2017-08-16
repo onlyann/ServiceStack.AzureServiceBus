@@ -52,6 +52,17 @@ namespace ServiceStack.AzureServiceBus
             }
         }
 
+        /// <summary>
+        /// Filter called every time a message is received.
+        /// The filter can also be called with a null message when the get message
+        /// results in a timeout.
+        /// </summary>
+        public Action<string, BrokeredMessage> GetMessageFilter
+        {
+            get => messageFactory.GetMessageFilter;
+            set => messageFactory.GetMessageFilter = value;
+        }
+
         private int status;
 
         public AzureBusServer(string connectionString): this(new AzureBusMessageFactory(connectionString))
