@@ -26,6 +26,16 @@ namespace ServiceStack.AzureServiceBus.Tests
         public string Name { get; set; }
     }
 
+    public class HelloGlobal : IReturn<HelloGlobalResponse>
+    {
+        public string Name { get; set; }
+    }
+
+    public class HelloGlobalResponse
+    {
+        public string Result { get; set; }
+    }
+
     public class HelloFail : IReturn<HelloFailResponse>
     {
         public string Name { get; set; }
@@ -432,8 +442,8 @@ namespace ServiceStack.AzureServiceBus.Tests
             using (var mqServer = CreateMqServer())
             {
                 await Task.WhenAll(
-                    mqServer.MessageFactory.PurgeQueueAsync<HelloIntro>(),
-                    mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<HelloIntroResponse>.In));
+                    mqServer.MessageFactory.PurgeQueueAsync<HelloGlobal>(),
+                    mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<HelloGlobalResponse>.In));
 
                 var azureServer = mqServer as AzureBusServer;
                 azureServer.RequestFilter = msg =>
@@ -444,7 +454,7 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 azureServer.ResponseFilter = response =>
                 {
-                    if (response is HelloIntroResponse helloResp)
+                    if (response is HelloGlobalResponse helloResp)
                     {
                         helloResp.Result += "!!!";
                     }
@@ -452,15 +462,15 @@ namespace ServiceStack.AzureServiceBus.Tests
                     return response;
                 };
 
-                mqServer.RegisterHandler<HelloIntro>(m =>
-                    new HelloIntroResponse { Result = $"Hello, {m.Meta["prefix"]} {m.GetBody().Name}".Fmt() });
+                mqServer.RegisterHandler<HelloGlobal>(m =>
+                    new HelloGlobalResponse { Result = $"Hello, {m.Meta["prefix"]} {m.GetBody().Name}".Fmt() });
                 mqServer.Start();
 
                 using (var mqClient = mqServer.CreateMessageQueueClient())
                 {
-                    mqClient.Publish(new HelloIntro { Name = "World" });
+                    mqClient.Publish(new HelloGlobal { Name = "World" });
 
-                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
+                    IMessage<HelloGlobalResponse> responseMsg = mqClient.Get<HelloGlobalResponse>(QueueNames<HelloGlobalResponse>.In);
                     mqClient.Ack(responseMsg);
                     Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Global World!!!"));
                 }
