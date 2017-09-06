@@ -48,6 +48,8 @@ The [AzureBusServer](src\ServiceStack.AzureServiceBus\AzureBusServer.cs) has the
 - `string` **connectionString** - The connection string to the Azure Service Bus namespace
 - `IMessageFactory` **MessageFactory** - the MQ Message Factory used by this MQ Server
 - `Action<QueueDescription>` **CreateQueueFilter** - A filter to customize the options Azure Queues are created/updated with.
+- `Action<string, BrokeredMessage>` **GetMessageFilter** - Called every time a message is received.
+- `Action<string, BrokeredMessage, IMessage>` **PublishMessageFilter** - Called every time a message gets published.
 
 As an alternative to a connection string, you can pass an instance of `AzureBusMessageFactory` to the `AzureBusServer` constructor and provide your own [NamespaceManager](https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.namespacemanager?redirectedfrom=MSDN&view=azureservicebus-4.1.1#microsoft_servicebus_namespacemanager) and [MessagingFactory](https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.messaging.messagingfactory?view=azureservicebus-4.1.1).
 
@@ -66,6 +68,8 @@ mqServer.RegisterHandler<Hello>(m => { .. }, noOfThreads:4);
 
 ### Filters
 
+#### Create Queue Filter
+
 To modify the options a queue gets created with, provide a `CreateQueueFilter` filter and modify the `QueueDescription`.
 
 For instance, to change the default TTL and have messages expire automatically after 2 minutes:
@@ -77,7 +81,32 @@ For instance, to change the default TTL and have messages expire automatically a
  });
 ```
 
-When the queue already exits, the filter can also be used to update the queue options in the same manner.
+If the queue already exists, any change to the queue options will result in an update.
+
+#### Message Filters
+
+There are optional `PublishMessageFilter` and `GetMessageFilter` callbacks which can be used to intercept outgoing and incoming messages. The Type name of the message body that was published is available in the `Label` property, e.g:
+
+```
+mqServer.PublishMessageFilter = (queueName, brokeredMsg, message) => {
+    brokeredMsg.Properties["AppId"] = "app:{0}".Fmt(queueName);
+};
+
+mqServer.GetMessageFilter = (queueName, brokeredMsg) => {
+    receivedMsgType = brokeredMsg.Label; //automatically added by AzureBusMessageProducer
+    receivedMsgApp = brokeredMsg.Properties["AppId"] as string;
+
+    receivedMsgType.Print(); // Hello
+    receivedMsgApp.Print(); // app:Hello.In
+};
+
+using (var mqClient = mqServer.CreateMessageQueueClient())
+{
+    mqClient.Publish(new Hello { Name = "Bright blue sky" });
+}
+```
+
+Note that `brokeredMsg` parameter of `GetMessageFilter` when explicitly retrieving a message results in a timeout.
 
 ## Upcoming Features
 
