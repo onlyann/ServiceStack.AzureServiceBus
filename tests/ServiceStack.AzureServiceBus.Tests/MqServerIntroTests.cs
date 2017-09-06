@@ -6,6 +6,7 @@ using ServiceStack.Messaging;
 using ServiceStack.Testing;
 using ServiceStack.Text;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -310,13 +311,20 @@ namespace ServiceStack.AzureServiceBus.Tests
                     var client = (IOneWayClient)mqClient;
                     client.SendAllOneWay(requests);
 
+                    var msgResponses = new List<string>();
+
                     var responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
                     mqClient.Ack(responseMsg);
-                    Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Foo!"));
+                    msgResponses.Add(responseMsg.GetBody().Result);
+                    
+                    
 
                     responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In, Config.ServerWaitTime);
                     mqClient.Ack(responseMsg);
-                    Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Bar!"));
+                    msgResponses.Add(responseMsg.GetBody().Result);
+
+                    Assert.That(msgResponses, Does.Contain("Hello, Foo!"));
+                    Assert.That(msgResponses, Does.Contain("Hello, Bar!"));
                 }
             }
         }
