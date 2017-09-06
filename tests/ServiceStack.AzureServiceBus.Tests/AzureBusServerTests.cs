@@ -358,6 +358,8 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                     var msg = mqClient.Get<HelloNull>(replyMq, TimeSpan.FromSeconds(10));
 
+                    await Task.Delay(200);
+
                     HelloNull response = msg.GetBody();
                     Assert.That(response.Name, Is.EqualTo("Into the Void"));
                     Assert.That(msgsReceived, Is.EqualTo(1));
