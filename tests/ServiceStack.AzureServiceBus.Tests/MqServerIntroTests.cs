@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace ServiceStack.AzureServiceBus.Tests
 {
     [NonParallelizable]
-    public class AzureBusServerrIntroTests : MqServerIntroTests
+    public class AzureBusServerIntroTests : MqServerIntroTests
     {
         public override IMessageService CreateMqServer(int retryCount = 1)
         {
