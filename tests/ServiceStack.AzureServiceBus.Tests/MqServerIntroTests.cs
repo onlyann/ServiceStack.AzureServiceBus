@@ -417,5 +417,46 @@ namespace ServiceStack.AzureServiceBus.Tests
                 appHost.Resolve<IMessageService>().Dispose();
             }
         }
+
+        [Test]
+        public async Task Global_request_and_response_get_called()
+        {
+            using (var mqServer = CreateMqServer())
+            {
+                await Task.WhenAll(
+                    mqServer.MessageFactory.PurgeQueueAsync<HelloIntro>(),
+                    mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<HelloIntroResponse>.In));
+
+                var azureServer = mqServer as AzureBusServer;
+                azureServer.RequestFilter = msg =>
+                {
+                    msg.Meta["prefix"] = "Global";
+                    return msg;
+                };
+
+                azureServer.ResponseFilter = response =>
+                {
+                    if (response is HelloIntroResponse helloResp)
+                    {
+                        helloResp.Result += "!!!";
+                    }
+
+                    return response;
+                };
+
+                mqServer.RegisterHandler<HelloIntro>(m =>
+                    new HelloIntroResponse { Result = $"Hello, {m.Meta["prefix"]} {m.GetBody().Name}".Fmt() });
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new HelloIntro { Name = "World" });
+
+                    IMessage<HelloIntroResponse> responseMsg = mqClient.Get<HelloIntroResponse>(QueueNames<HelloIntroResponse>.In);
+                    mqClient.Ack(responseMsg);
+                    Assert.That(responseMsg.GetBody().Result, Is.EqualTo("Hello, Global World!!!"));
+                }
+            }
+        }
     }
 }

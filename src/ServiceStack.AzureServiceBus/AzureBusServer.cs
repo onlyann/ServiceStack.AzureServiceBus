@@ -72,6 +72,18 @@ namespace ServiceStack.AzureServiceBus
             set => messageFactory.PublishMessageFilter = value;
         }
 
+        /// <summary>
+        /// Execute global transformation or custom logic before a request is processed.
+        /// Must be thread-safe.
+        /// </summary>
+        public Func<IMessage, IMessage> RequestFilter { get; set; }
+
+        /// <summary>
+        /// Execute global transformation or custom logic on the response.
+        /// Must be thread-safe.
+        /// </summary>
+        public Func<object, object> ResponseFilter { get; set; }
+
         private int status;
 
         public AzureBusServer(string connectionString): this(new AzureBusMessageFactory(connectionString))
@@ -142,6 +154,8 @@ namespace ServiceStack.AzureServiceBus
         {
             return new MessageHandlerFactory<T>(this, processMessageFn, processExceptionEx)
             {
+                RequestFilter = RequestFilter,
+                ResponseFilter = ResponseFilter,
                 RetryCount = RetryCount,
             };
         }

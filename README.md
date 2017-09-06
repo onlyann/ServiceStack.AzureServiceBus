@@ -47,6 +47,8 @@ The [AzureBusServer](src\ServiceStack.AzureServiceBus\AzureBusServer.cs) has the
 - `int` **RetryCount** - How many times a message should be retried before sending to the DLQ.
 - `string` **connectionString** - The connection string to the Azure Service Bus namespace
 - `IMessageFactory` **MessageFactory** - the MQ Message Factory used by this MQ Server
+- `Func<IMessage, IMessage>` **RequestFilter** - Execute global transformation or custom logic before a request is processed. Must be thread-safe.
+- `Func<object, object>` **ResponseFilter** - Execute global transformation or custom logic on the response. Must be thread-safe.
 - `Action<QueueDescription>` **CreateQueueFilter** - A filter to customize the options Azure Queues are created/updated with.
 - `Action<string, BrokeredMessage>` **GetMessageFilter** - Called every time a message is received.
 - `Action<string, BrokeredMessage, IMessage>` **PublishMessageFilter** - Called every time a message gets published.
@@ -66,9 +68,7 @@ mqServer.RegisterHandler<Hello>(m => { .. }, noOfThreads:4);
 
 > Behind the scenes, it delegates the work to Azure Service Bus [event-driven message pump](https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.messaging.messagereceiver.onmessage?view=azureservicebus-4.1.1#Microsoft_ServiceBus_Messaging_MessageReceiver_OnMessage_System_Action_Microsoft_ServiceBus_Messaging_BrokeredMessage__Microsoft_ServiceBus_Messaging_OnMessageOptions_).
 
-### Filters
-
-#### Create Queue Filter
+### Create Queue Filter
 
 To modify the options a queue gets created with, provide a `CreateQueueFilter` filter and modify the `QueueDescription`.
 
@@ -83,7 +83,7 @@ For instance, to change the default TTL and have messages expire automatically a
 
 If the queue already exists, any change to the queue options will result in an update.
 
-#### Message Filters
+### Message Filters
 
 There are optional `PublishMessageFilter` and `GetMessageFilter` callbacks which can be used to intercept outgoing and incoming messages. The Type name of the message body that was published is available in the `Label` property, e.g:
 
@@ -111,5 +111,4 @@ Note that `brokeredMsg` parameter of `GetMessageFilter` when explicitly retrievi
 ## Upcoming Features
 
 - [ ] queue whitelisting
-- [ ] request and response global filter
 - [ ] error handler

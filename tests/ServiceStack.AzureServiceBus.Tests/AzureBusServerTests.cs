@@ -155,10 +155,16 @@ namespace ServiceStack.AzureServiceBus.Tests
         {
             public string Name { get; set; }
         }
-        public class HelloNull : IReturn<HelloResponse>
+        public class HelloNull1 : IReturn<HelloResponse>
         {
             public string Name { get; set; }
         }
+
+        public class HelloNull2 : IReturn<HelloResponse>
+        {
+            public string Name { get; set; }
+        }
+
         public class HelloResponse
         {
             public string Result { get; set; }
@@ -307,8 +313,11 @@ namespace ServiceStack.AzureServiceBus.Tests
             int msgsReceived = 0;
             using (var mqServer = CreateMqServer())
             {
-                await mqServer.MessageFactory.PurgeQueueAsync<HelloNull>();
-                mqServer.RegisterHandler<HelloNull>(m =>
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                    QueueNames<HelloNull1>.In,
+                    QueueNames<HelloNull1>.Out
+                    );
+                mqServer.RegisterHandler<HelloNull1>(m =>
                 {
                     Interlocked.Increment(ref msgsReceived);
                     return null;
@@ -318,12 +327,12 @@ namespace ServiceStack.AzureServiceBus.Tests
 
                 using (var mqClient = mqServer.CreateMessageQueueClient())
                 {
-                    mqClient.Publish(new HelloNull { Name = "Into the Void" });
+                    mqClient.Publish(new HelloNull1 { Name = "Into the Void" });
 
-                    var msg = mqClient.Get<HelloNull>(QueueNames<HelloNull>.Out, TimeSpan.FromSeconds(10));
+                    var msg = mqClient.Get<HelloNull1>(QueueNames<HelloNull1>.Out, TimeSpan.FromSeconds(10));
                     Assert.That(msg, Is.Not.Null);
 
-                    HelloNull response = msg.GetBody();
+                    HelloNull1 response = msg.GetBody();
 
                     Thread.Sleep(100);
 
@@ -339,8 +348,11 @@ namespace ServiceStack.AzureServiceBus.Tests
             int msgsReceived = 0;
             using (var mqServer = CreateMqServer())
             {
-                await mqServer.MessageFactory.PurgeQueuesAsync(QueueNames<HelloNull>.In);
-                mqServer.RegisterHandler<HelloNull>(m =>
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                   QueueNames<HelloNull2>.In,
+                   QueueNames<HelloNull2>.Out
+                   );
+                mqServer.RegisterHandler<HelloNull2>(m =>
                 {
                     Interlocked.Increment(ref msgsReceived);
                     return null;
@@ -351,16 +363,16 @@ namespace ServiceStack.AzureServiceBus.Tests
                 using (var mqClient = mqServer.CreateMessageQueueClient())
                 {
                     var replyMq = mqClient.GetTempQueueName();
-                    mqClient.Publish(new Message<HelloNull>(new HelloNull { Name = "Into the Void" })
+                    mqClient.Publish(new Message<HelloNull2>(new HelloNull2 { Name = "Into the Void" })
                     {
                         ReplyTo = replyMq
                     });
 
-                    var msg = mqClient.Get<HelloNull>(replyMq, TimeSpan.FromSeconds(10));
+                    var msg = mqClient.Get<HelloNull2>(replyMq, TimeSpan.FromSeconds(10));
 
-                    await Task.Delay(200);
+                    await Task.Delay(100);
 
-                    HelloNull response = msg.GetBody();
+                    HelloNull2 response = msg.GetBody();
                     Assert.That(response.Name, Is.EqualTo("Into the Void"));
                     Assert.That(msgsReceived, Is.EqualTo(1));
                 }
