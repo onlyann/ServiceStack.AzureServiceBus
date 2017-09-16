@@ -3,6 +3,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/2c1ackhg6rloriok/branch/master?svg=true)](https://ci.appveyor.com/project/onlyann/servicestack-azureservicebus/branch/master)
 [![Nuget](https://img.shields.io/nuget/v/ServiceStack.AzureServiceBus.svg)](https://www.nuget.org/packages/ServiceStack.AzureServiceBus/)
 
+
 This adds Azure Service Bus [MQ Server option](http://docs.servicestack.net/messaging) for the excellent [ServiceStack](https://github.com/serviceStack/serviceStack) framework.
 
 As it relies on [WindowsAzure.ServiceBus](https://www.nuget.org/packages/WindowsAzure.ServiceBus/) Nuget package, it requires .Net Framework 4.5 Full Profile.
@@ -14,6 +15,17 @@ This is inspired from the [Rabbit MQ implementation](http://docs.servicestack.ne
 - Messages with exceptions are re-tried then published to the respective [dead-letter queue](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dead-letter-queues)
 - OneWay HTTP requests are published to MQ then executed
 - OneWay MQ and HTTP Service Clients are Substitutable
+
+
+>> ServiceStack has added MQ support for Azure Service Bus as part of their v4.5.14 release maintained >> at https://github.com/ServiceStack/ServiceStack.Azure.
+>>
+>> I would recommend using the official implementation instead of this one if it covers your needs.
+>> 
+>> One reason you may want to give this non-official implementation a try is that you are not targeting
+>> .NET Core and you need some feature that is not part of the official MQ Server.
+>>
+>> Ideally, the official package eventually offers all features (and likely more) and this repository can enjoy
+>> an early retirement.
 
 ## Adding Azure Service Bus MQ support to ServiceStack
 
