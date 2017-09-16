@@ -277,11 +277,16 @@ namespace ServiceStack.AzureServiceBus
             QueueNames queueNames,
             Action<QueueDescription> createQueueFilter = null)
         {
-            return Task.WhenAll(
-            namespaceMgr.RegisterQueueAsync(queueNames.In, createQueueFilter),
-            namespaceMgr.RegisterQueueAsync(queueNames.Priority, createQueueFilter),
-            namespaceMgr.RegisterQueueAsync(queueNames.Out, createQueueFilter));
+            return RegisterQueuesAsync(namespaceMgr, new[] { queueNames.In, queueNames.Out, queueNames.Priority }, createQueueFilter);
             // queueNames.Dlq is created by Azure Service Bus
+        }
+
+        public static Task RegisterQueuesAsync(
+            this NamespaceManager namespaceMgr,
+            IEnumerable<string> queueNames,
+            Action<QueueDescription> createQueueFilter = null)
+        {
+            return Task.WhenAll(queueNames.Select(x => namespaceMgr.RegisterQueueAsync(x, createQueueFilter)));
         }
 
         public static Task RegisterQueuesAsync<T>(

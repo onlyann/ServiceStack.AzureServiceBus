@@ -17,15 +17,15 @@ This is inspired from the [Rabbit MQ implementation](http://docs.servicestack.ne
 - OneWay MQ and HTTP Service Clients are Substitutable
 
 
->> ServiceStack has added MQ support for Azure Service Bus as part of their v4.5.14 release maintained >> at https://github.com/ServiceStack/ServiceStack.Azure.
->>
->> I would recommend using the official implementation instead of this one if it covers your needs.
->> 
->> One reason you may want to give this non-official implementation a try is that you are not targeting
->> .NET Core and you need some feature that is not part of the official MQ Server.
->>
->> Ideally, the official package eventually offers all features (and likely more) and this repository can enjoy
->> an early retirement.
+> ServiceStack has added MQ support for Azure Service Bus as part of their v4.5.14 release maintained at https://github.com/ServiceStack/ServiceStack.Azure.
+>
+> I would recommend using the official implementation instead of this one if it covers your needs.
+> 
+> One reason you may want to give this non-official implementation a try is that you are not targeting
+> .NET Core and you need some feature that is not part of the official MQ Server.
+>
+> Ideally, the official package eventually offers all features (and likely more) and this repository can enjoy
+> an early retirement.
 
 ## Adding Azure Service Bus MQ support to ServiceStack
 
@@ -64,6 +64,10 @@ The [AzureBusServer](src\ServiceStack.AzureServiceBus\AzureBusServer.cs) has the
 - `Action<QueueDescription>` **CreateQueueFilter** - A filter to customize the options Azure Queues are created/updated with.
 - `Action<string, BrokeredMessage>` **GetMessageFilter** - Called every time a message is received.
 - `Action<string, BrokeredMessage, IMessage>` **PublishMessageFilter** - Called every time a message gets published.
+- `string[]` **PriorityQueuesWhitelist** - If you only want to enable priority queue handlers (and threads) for specific message types. All message types have priority queues by default.
+- `bool` **DisablePriorityQueues** - No priority queue will be created or listened to.
+- `string[]` **PublishResponsesWhitelist** - Opt-in to only publish responses on this whitelist. All responses are published by default.
+- `bool` **DisablePublishingResponses** - No response will be published.
 
 As an alternative to a connection string, you can pass an instance of `AzureBusMessageFactory` to the `AzureBusServer` constructor and provide your own [NamespaceManager](https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.namespacemanager?redirectedfrom=MSDN&view=azureservicebus-4.1.1#microsoft_servicebus_namespacemanager) and [MessagingFactory](https://docs.microsoft.com/en-us/dotnet/api/microsoft.servicebus.messaging.messagingfactory?view=azureservicebus-4.1.1).
 
@@ -118,9 +122,24 @@ using (var mqClient = mqServer.CreateMessageQueueClient())
 }
 ```
 
-Note that `brokeredMsg` parameter of `GetMessageFilter` when explicitly retrieving a message results in a timeout.
+Note that the `brokeredMsg` parameter of `GetMessageFilter` can be null when explicitly retrieving a message results in a timeout.
+
+## Whitelisting priority messages and publishing responses
+
+By default, all registered handlers will result in listening to a normal priority queue and a high priority queue. As well, all message responses get published to their respective queues.
+
+Priority messages and publishing responses can be entirely disabled by setting `DisablePriorityQueues` and `DisablePublishingResponses` respectively to true.
+
+It is also possible to whitelist the priority queues and responses to publish by message type.
+
+```
+// only use a priority queue for Hello messages 
+mqServer.PriorityQueuesWhitelist = new[] { nameof(Hello) };
+
+// only publish HelloResponse responses
+mqServer.PublishResponsesWhitelist = new[] { nameof(HelloResponse) }; 
+```
 
 ## Upcoming Features
 
-- [ ] queue whitelisting
 - [ ] error handler

@@ -2,6 +2,7 @@
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.Text;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,6 +85,36 @@ namespace ServiceStack.AzureServiceBus
         /// </summary>
         public Func<object, object> ResponseFilter { get; set; }
 
+        /// <summary>
+        /// If you only want to enable priority queue handlers (and threads) for specific msg types
+        /// </summary>
+        public string[] PriorityQueuesWhitelist { get; set; }
+
+        /// <summary>
+        /// Don't listen on any Priority Queues
+        /// </summary>
+        public bool DisablePriorityQueues
+        {
+            set
+            {
+                PriorityQueuesWhitelist = TypeConstants.EmptyStringArray;
+            }
+        }
+
+        /// <summary>
+        /// Opt-in to only publish responses on this white list. 
+        /// Publishes all responses by default.
+        /// </summary>
+        public string[] PublishResponsesWhitelist { get; set; }
+
+        /// <summary>
+        /// Don't publish any response messages
+        /// </summary>
+        public bool DisablePublishingResponses
+        {
+            set { PublishResponsesWhitelist = value ? TypeConstants.EmptyStringArray : null; }
+        }
+
         private int status;
 
         public AzureBusServer(string connectionString): this(new AzureBusMessageFactory(connectionString))
@@ -157,6 +188,7 @@ namespace ServiceStack.AzureServiceBus
                 RequestFilter = RequestFilter,
                 ResponseFilter = ResponseFilter,
                 RetryCount = RetryCount,
+                PublishResponsesWhitelist = PublishResponsesWhitelist
             };
         }
 
@@ -204,11 +236,19 @@ namespace ServiceStack.AzureServiceBus
                 var queueNames = new QueueNames(msgType);
                 var noOfThreads = handlerThreadCountMap[msgType];
 
-                msgPumpsBuilder.Add(new AzureMessageReceiverPump(
+                var queuesToRegister = new List<string> { queueNames.In, queueNames.Out };
+
+                if (PriorityQueuesWhitelist == null 
+                    || PriorityQueuesWhitelist.Any(x => x == msgType.Name))
+                {
+                    msgPumpsBuilder.Add(new AzureMessageReceiverPump(
                             messageFactory,
                             handlerFactory,
                             queueNames.Priority,
                             noOfThreads));
+
+                    queuesToRegister.Add(queueNames.Priority);
+                }
 
                 msgPumpsBuilder.Add(new AzureMessageReceiverPump(
                              messageFactory,
@@ -216,7 +256,7 @@ namespace ServiceStack.AzureServiceBus
                              queueNames.In,
                              noOfThreads));
 
-                await messageFactory.NamespaceManager.RegisterQueuesAsync(queueNames, createQueueFilter).ConfigureAwait(false);
+                await messageFactory.NamespaceManager.RegisterQueuesAsync(queuesToRegister, createQueueFilter).ConfigureAwait(false);
             }
 
             messagePumps = msgPumpsBuilder.ToArray();

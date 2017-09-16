@@ -26,6 +26,25 @@ namespace ServiceStack.AzureServiceBus.Tests
         public string Value { get; set; }
     }
 
+    public class Hello : IReturn<HelloResponse>
+    {
+        public string Name { get; set; }
+    }
+    public class HelloNull1 : IReturn<HelloResponse>
+    {
+        public string Name { get; set; }
+    }
+
+    public class HelloNull2 : IReturn<HelloResponse>
+    {
+        public string Name { get; set; }
+    }
+
+    public class HelloResponse
+    {
+        public string Result { get; set; }
+    }
+
     [TestFixture, Category("Integration")]
     [NonParallelizable]
     public class AzureBusServerTests
@@ -149,25 +168,6 @@ namespace ServiceStack.AzureServiceBus.Tests
                     Thread.Sleep(100);
                 }, TimeSpan.FromSeconds(10));
             }
-        }
-
-        public class Hello : IReturn<HelloResponse>
-        {
-            public string Name { get; set; }
-        }
-        public class HelloNull1 : IReturn<HelloResponse>
-        {
-            public string Name { get; set; }
-        }
-
-        public class HelloNull2 : IReturn<HelloResponse>
-        {
-            public string Name { get; set; }
-        }
-
-        public class HelloResponse
-        {
-            public string Result { get; set; }
         }
 
         [Test]
@@ -369,6 +369,7 @@ namespace ServiceStack.AzureServiceBus.Tests
                     });
 
                     var msg = mqClient.Get<HelloNull2>(replyMq, TimeSpan.FromSeconds(10));
+                    mqClient.Ack(msg);
 
                     await Task.Delay(100);
 
@@ -437,6 +438,150 @@ namespace ServiceStack.AzureServiceBus.Tests
                     Assert.That(desc.MaxSizeInMegabytes, Is.EqualTo(3072));
                     Assert.That(desc.MaxDeliveryCount, Is.EqualTo(3));
                 }
+            }
+        }
+
+        [Test]
+        public async Task Can_disable_priority_queues()
+        {
+            var msgsReceived = 0;
+
+            using (var mqServer = CreateMqServer())
+            {
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                    QueueNames<Hello>.In,
+                    QueueNames<HelloResponse>.In,
+                    QueueNames<Hello>.Priority);
+
+                mqServer.DisablePriorityQueues = true;
+
+                mqServer.RegisterHandler<Hello>(message =>
+                {
+                    Interlocked.Increment(ref msgsReceived);
+                    return new HelloResponse() { Result = $"{message.GetBody().Name} world" };
+                });
+
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new Message<Hello>(new Hello { Name = "Hello" }));
+                    mqClient.Publish(new Message<Hello>(new Hello { Name = "Hello in priority" }) { Priority = 1 });
+
+                    var msg = mqClient.Get<HelloResponse>(QueueNames<HelloResponse>.In, Config.ServerWaitTime);
+                    mqClient.Ack(msg);
+                    Assert.That(msg.GetBody().Result, Is.EqualTo("Hello world"));
+                }
+
+                Assert.That(msgsReceived, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public async Task Can_whitelist_priority_queue_by_message_type()
+        {
+            var msgsReceived = 0;
+
+            using (var mqServer = CreateMqServer())
+            {
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                    QueueNames<Hello>.In,
+                    QueueNames<HelloResponse>.In,
+                    QueueNames<Hello>.Priority);
+
+                mqServer.PriorityQueuesWhitelist = new[] { nameof(Hello) };
+
+                mqServer.RegisterHandler<Hello>(message =>
+                {
+                    Interlocked.Increment(ref msgsReceived);
+                    return new HelloResponse() { Result = $"{message.GetBody().Name} world" };
+                });
+
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new Message<Hello>(new Hello { Name = "Hello" }));
+                    mqClient.Publish(new Message<Hello>(new Hello { Name = "Hello in priority" }) { Priority = 1 });
+
+                    var msg = mqClient.Get<HelloResponse>(QueueNames<HelloResponse>.In, Config.ServerWaitTime);
+                    mqClient.Ack(msg);
+                    msg = mqClient.Get<HelloResponse>(QueueNames<HelloResponse>.In, Config.ServerWaitTime);
+                    mqClient.Ack(msg);
+                }
+
+                Assert.That(msgsReceived, Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public async Task Can_disable_publishing_responses()
+        {
+            var msgsReceived = 0;
+
+            using (var mqServer = CreateMqServer())
+            {
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                    QueueNames<Hello>.In,
+                    QueueNames<HelloResponse>.In,
+                    QueueNames<Hello>.Priority);
+
+                mqServer.DisablePublishingResponses = true;
+
+                mqServer.RegisterHandler<Hello>(message =>
+                {
+                    Interlocked.Increment(ref msgsReceived);
+                    return new HelloResponse() { Result = $"{message.GetBody().Name} world" };
+                });
+
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new Hello { Name = "Hello" });
+                   
+                    var msg = mqClient.Get<HelloResponse>(QueueNames<HelloResponse>.In, TimeSpan.FromSeconds(1));
+                    Assert.Null(msg);
+                }
+
+                Assert.That(msgsReceived, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public async Task Can_whitelist_publishing_responses_by_message_type()
+        {
+            var msgsReceived = 0;
+
+            using (var mqServer = CreateMqServer())
+            {
+                await mqServer.MessageFactory.PurgeQueuesAsync(
+                    QueueNames<Hello>.In,
+                    QueueNames<HelloResponse>.In,
+                    QueueNames<Hello>.Priority);
+
+                mqServer.PublishResponsesWhitelist = new[] { nameof(HelloResponse) };
+
+                mqServer.RegisterHandler<Hello>(message =>
+                {
+                    Interlocked.Increment(ref msgsReceived);
+                    return new HelloResponse() { Result = $"{message.GetBody().Name} world" };
+                });
+
+                mqServer.Start();
+
+                using (var mqClient = mqServer.CreateMessageQueueClient())
+                {
+                    mqClient.Publish(new Hello { Name = "Hello" });
+                   
+                    var msg = mqClient.Get<HelloResponse>(QueueNames<HelloResponse>.In, Config.ServerWaitTime);
+                    if (msg != null)
+                    {
+                        mqClient.Ack(msg);
+                    }
+                }
+
+                Assert.That(msgsReceived, Is.EqualTo(1));
             }
         }
     }
